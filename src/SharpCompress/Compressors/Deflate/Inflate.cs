@@ -64,7 +64,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-
 using SharpCompress.Algorithms;
 
 namespace SharpCompress.Compressors.Deflate;
@@ -94,7 +93,7 @@ internal sealed class InflateBlocks
         2,
         14,
         1,
-        15
+        15,
     };
 
     internal ZlibCodec _codec; // pointer back to this zlib stream
@@ -106,11 +105,11 @@ internal sealed class InflateBlocks
     internal int[] blens; // bit lengths of codes
     internal uint check; // check on output
     internal object checkfn; // check function
-    internal InflateCodes codes = new InflateCodes(); // if CODES, current state
+    internal InflateCodes codes = new(); // if CODES, current state
     internal int end; // one byte after sliding window
     internal int[] hufts; // single malloc for tree space
     internal int index; // index into blens (or border)
-    internal InfTree inftree = new InfTree();
+    internal InfTree inftree = new();
     internal int last; // true if this block is the last block
     internal int left; // if STORED, bytes left to copy
     private InflateBlockMode mode; // current inflate_block mode
@@ -816,7 +815,7 @@ internal sealed class InflateBlocks
         CODES = 6, // processing fixed or dynamic block
         DRY = 7, // output remaining window bytes
         DONE = 8, // finished last block, done
-        BAD = 9 // ot a data error--stuck here
+        BAD = 9, // ot a data error--stuck here
     }
 
     #endregion
@@ -843,7 +842,7 @@ internal static class InternalInflateConstants
         0x00001fff,
         0x00003fff,
         0x00007fff,
-        0x0000ffff
+        0x0000ffff,
     };
 }
 
@@ -2055,7 +2054,7 @@ internal sealed class InflateManager
         CHECK2 = 10, // two check bytes to go
         CHECK1 = 11, // one check byte to go
         DONE = 12, // finished check, done
-        BAD = 13 // got an error--stay here
+        BAD = 13, // got an error--stay here
     }
 
     #endregion

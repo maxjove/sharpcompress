@@ -69,7 +69,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-
 using SharpCompress.Algorithms;
 
 namespace SharpCompress.Compressors.Deflate;
@@ -107,7 +106,7 @@ internal sealed partial class DeflateManager
         5,
         5,
         5,
-        0
+        0,
     };
 
     // extra bits for each distance code
@@ -142,7 +141,7 @@ internal sealed partial class DeflateManager
         12,
         12,
         13,
-        13
+        13,
     };
 
     internal enum BlockState
@@ -150,14 +149,14 @@ internal sealed partial class DeflateManager
         NeedMore = 0, // block not completed, need more input or more output
         BlockDone, // block flush performed
         FinishStarted, // finish started, need only more output at next deflate
-        FinishDone // finish done, accept no more input or output
+        FinishDone, // finish done, accept no more input or output
     }
 
     internal enum DeflateFlavor
     {
         Store,
         Fast,
-        Slow
+        Slow,
     }
 
     private const int MEM_LEVEL_MAX = 9;
@@ -215,7 +214,7 @@ internal sealed partial class DeflateManager
                 new Config(8, 16, 128, 128, DeflateFlavor.Slow),
                 new Config(8, 32, 128, 256, DeflateFlavor.Slow),
                 new Config(32, 128, 258, 1024, DeflateFlavor.Slow),
-                new Config(32, 258, 258, 4096, DeflateFlavor.Slow)
+                new Config(32, 258, 258, 4096, DeflateFlavor.Slow),
             };
 
         private static readonly Config[] Table;
@@ -234,7 +233,7 @@ internal sealed partial class DeflateManager
         "insufficient memory",
         "buffer error",
         "incompatible version",
-        ""
+        "",
     };
 
     // preset dictionary flag in zlib header
@@ -343,9 +342,9 @@ internal sealed partial class DeflateManager
     private readonly short[] dyn_dtree; // distance tree
     private readonly short[] bl_tree; // Huffman tree for bit lengths
 
-    private readonly Tree treeLiterals = new Tree(); // desc for literal tree
-    private readonly Tree treeDistances = new Tree(); // desc for distance tree
-    private readonly Tree treeBitLengths = new Tree(); // desc for bit length tree
+    private readonly Tree treeLiterals = new(); // desc for literal tree
+    private readonly Tree treeDistances = new(); // desc for distance tree
+    private readonly Tree treeBitLengths = new(); // desc for bit length tree
 
     // number of codes at each bit length for an optimal tree
     private readonly short[] bl_count = new short[InternalConstants.MAX_BITS + 1];
@@ -1788,21 +1787,14 @@ internal sealed partial class DeflateManager
         return status == BUSY_STATE ? ZlibConstants.Z_DATA_ERROR : ZlibConstants.Z_OK;
     }
 
-    private void SetDeflater()
-    {
-        switch (config.Flavor)
+    private void SetDeflater() =>
+        DeflateFunction = config.Flavor switch
         {
-            case DeflateFlavor.Store:
-                DeflateFunction = DeflateNone;
-                break;
-            case DeflateFlavor.Fast:
-                DeflateFunction = DeflateFast;
-                break;
-            case DeflateFlavor.Slow:
-                DeflateFunction = DeflateSlow;
-                break;
-        }
-    }
+            DeflateFlavor.Store => DeflateNone,
+            DeflateFlavor.Fast => DeflateFast,
+            DeflateFlavor.Slow => DeflateSlow,
+            _ => DeflateFunction,
+        };
 
     internal int SetParams(CompressionLevel level, CompressionStrategy strategy)
     {
@@ -1959,7 +1951,9 @@ internal sealed partial class DeflateManager
             // returning Z_STREAM_END instead of Z_BUFF_ERROR.
         }
         else if (
-            _codec.AvailableBytesIn == 0 && (int)flush <= old_flush && flush != FlushType.Finish
+            _codec.AvailableBytesIn == 0
+            && (int)flush <= old_flush
+            && flush != FlushType.Finish
         )
         {
             // workitem 8557

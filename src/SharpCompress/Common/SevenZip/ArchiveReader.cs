@@ -14,13 +14,13 @@ namespace SharpCompress.Common.SevenZip;
 internal class ArchiveReader
 {
     internal Stream _stream;
-    internal Stack<DataReader> _readerStack = new Stack<DataReader>();
+    internal Stack<DataReader> _readerStack = new();
     internal DataReader _currentReader;
     internal long _streamOrigin;
     internal long _streamEnding;
     internal byte[] _header;
 
-    private readonly Dictionary<int, Stream> _cachedStreams = new Dictionary<int, Stream>();
+    private readonly Dictionary<int, Stream> _cachedStreams = new();
 
     internal void AddByteStream(byte[] buffer, int offset, int length)
     {
@@ -1220,23 +1220,46 @@ internal class ArchiveReader
 
     #region Public Methods
 
-    public void Open(Stream stream)
+    public void Open(Stream stream, bool lookForHeader)
     {
         Close();
 
         _streamOrigin = stream.Position;
         _streamEnding = stream.Length;
 
-        // TODO: Check Signature!
-        _header = new byte[0x20];
-        for (var offset = 0; offset < 0x20; )
+        var canScan = lookForHeader ? 0x80000 - 20 : 0;
+        while (true)
         {
-            var delta = stream.Read(_header, offset, 0x20 - offset);
-            if (delta == 0)
+            // TODO: Check Signature!
+            _header = new byte[0x20];
+            for (var offset = 0; offset < 0x20; )
             {
-                throw new EndOfStreamException();
+                var delta = stream.Read(_header, offset, 0x20 - offset);
+                if (delta == 0)
+                {
+                    throw new EndOfStreamException();
+                }
+
+                offset += delta;
             }
-            offset += delta;
+
+            if (
+                !lookForHeader
+                || _header
+                    .AsSpan(0, length: 6)
+                    .SequenceEqual<byte>([0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C])
+            )
+            {
+                break;
+            }
+
+            if (canScan == 0)
+            {
+                throw new InvalidFormatException("Unable to find 7z signature");
+            }
+
+            canScan--;
+            stream.Position = ++_streamOrigin;
         }
 
         _stream = stream;
@@ -1359,7 +1382,7 @@ internal class ArchiveReader
     {
         internal int _fileIndex;
         internal int _folderIndex;
-        internal List<bool> _extractStatuses = new List<bool>();
+        internal List<bool> _extractStatuses = new();
 
         internal CExtractFolderInfo(int fileIndex, int folderIndex)
         {
@@ -1393,7 +1416,7 @@ internal class ArchiveReader
 
         public override bool CanWrite => false;
 
-        public override void Flush() => throw new NotSupportedException();
+        public override void Flush() { }
 
         public override long Length => throw new NotSupportedException();
 

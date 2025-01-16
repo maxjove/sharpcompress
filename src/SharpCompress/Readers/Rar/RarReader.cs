@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,17 +13,32 @@ namespace SharpCompress.Readers.Rar;
 /// </summary>
 public abstract class RarReader : AbstractReader<RarReaderEntry, RarVolume>
 {
+    private bool _disposed;
     private RarVolume? volume;
-    internal Lazy<IRarUnpack> UnpackV2017 { get; } =
-        new Lazy<IRarUnpack>(() => new Compressors.Rar.UnpackV2017.Unpack());
-    internal Lazy<IRarUnpack> UnpackV1 { get; } =
-        new Lazy<IRarUnpack>(() => new Compressors.Rar.UnpackV1.Unpack());
+    private Lazy<IRarUnpack> UnpackV2017 { get; } =
+        new(() => new Compressors.Rar.UnpackV2017.Unpack());
+    private Lazy<IRarUnpack> UnpackV1 { get; } = new(() => new Compressors.Rar.UnpackV1.Unpack());
 
-    internal RarReader(ReaderOptions options) : base(options, ArchiveType.Rar) { }
+    internal RarReader(ReaderOptions options)
+        : base(options, ArchiveType.Rar) { }
 
-    internal abstract void ValidateArchive(RarVolume archive);
+    public override void Dispose()
+    {
+        if (!_disposed)
+        {
+            if (UnpackV1.IsValueCreated && UnpackV1.Value is IDisposable unpackV1)
+            {
+                unpackV1.Dispose();
+            }
 
-    public override RarVolume Volume => volume!;
+            _disposed = true;
+            base.Dispose();
+        }
+    }
+
+    protected abstract void ValidateArchive(RarVolume archive);
+
+    public override RarVolume? Volume => volume;
 
     /// <summary>
     /// Opens a RarReader for Non-seeking usage with a single volume
@@ -50,7 +66,7 @@ public abstract class RarReader : AbstractReader<RarReaderEntry, RarVolume>
 
     protected override IEnumerable<RarReaderEntry> GetEntries(Stream stream)
     {
-        volume = new RarReaderVolume(stream, Options);
+        volume = new RarReaderVolume(stream, Options, 0);
         foreach (var fp in volume.ReadFileParts())
         {
             ValidateArchive(volume);
@@ -63,6 +79,11 @@ public abstract class RarReader : AbstractReader<RarReaderEntry, RarVolume>
 
     protected override EntryStream GetEntryStream()
     {
+        if (Entry.IsRedir)
+        {
+            throw new InvalidOperationException("no stream for redirect entry");
+        }
+
         var stream = new MultiVolumeReadOnlyStream(
             CreateFilePartEnumerableForCurrentEntry().Cast<RarFilePart>(),
             this
@@ -71,6 +92,14 @@ public abstract class RarReader : AbstractReader<RarReaderEntry, RarVolume>
         {
             return CreateEntryStream(new RarCrcStream(UnpackV1.Value, Entry.FileHeader, stream));
         }
+
+        if (Entry.FileHeader.FileCrc.Length > 5)
+        {
+            return CreateEntryStream(
+                new RarBLAKE2spStream(UnpackV2017.Value, Entry.FileHeader, stream)
+            );
+        }
+
         return CreateEntryStream(new RarCrcStream(UnpackV2017.Value, Entry.FileHeader, stream));
     }
 }

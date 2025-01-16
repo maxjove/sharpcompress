@@ -13,8 +13,8 @@ internal class LocalEntryHeader : ZipFileEntry
         Version = reader.ReadUInt16();
         Flags = (HeaderFlags)reader.ReadUInt16();
         CompressionMethod = (ZipCompressionMethod)reader.ReadUInt16();
-        LastModifiedTime = reader.ReadUInt16();
-        LastModifiedDate = reader.ReadUInt16();
+        OriginalLastModifiedTime = LastModifiedTime = reader.ReadUInt16();
+        OriginalLastModifiedDate = LastModifiedDate = reader.ReadUInt16();
         Crc = reader.ReadUInt32();
         CompressedSize = reader.ReadUInt32();
         UncompressedSize = reader.ReadUInt32();
@@ -42,8 +42,8 @@ internal class LocalEntryHeader : ZipFileEntry
 
         LoadExtra(extra);
 
-        var unicodePathExtra = Extra.FirstOrDefault(
-            u => u.Type == ExtraDataType.UnicodePathExtraField
+        var unicodePathExtra = Extra.FirstOrDefault(u =>
+            u.Type == ExtraDataType.UnicodePathExtraField
         );
         if (unicodePathExtra != null && ArchiveEncoding.Forced == null)
         {
@@ -62,6 +62,36 @@ internal class LocalEntryHeader : ZipFileEntry
             if (UncompressedSize == uint.MaxValue)
             {
                 UncompressedSize = zip64ExtraData.UncompressedSize;
+            }
+        }
+
+        var unixTimeExtra = Extra.FirstOrDefault(u => u.Type == ExtraDataType.UnixTimeExtraField);
+
+        if (unixTimeExtra is not null)
+        {
+            // Tuple order is last modified time, last access time, and creation time.
+            var unixTimeTuple = ((UnixTimeExtraField)unixTimeExtra).UnicodeTimes;
+
+            if (unixTimeTuple.Item1.HasValue)
+            {
+                var dosTime = Utility.DateTimeToDosTime(unixTimeTuple.Item1.Value);
+
+                LastModifiedDate = (ushort)(dosTime >> 16);
+                LastModifiedTime = (ushort)(dosTime & 0x0FFFF);
+            }
+            else if (unixTimeTuple.Item2.HasValue)
+            {
+                var dosTime = Utility.DateTimeToDosTime(unixTimeTuple.Item2.Value);
+
+                LastModifiedDate = (ushort)(dosTime >> 16);
+                LastModifiedTime = (ushort)(dosTime & 0x0FFFF);
+            }
+            else if (unixTimeTuple.Item3.HasValue)
+            {
+                var dosTime = Utility.DateTimeToDosTime(unixTimeTuple.Item3.Value);
+
+                LastModifiedDate = (ushort)(dosTime >> 16);
+                LastModifiedTime = (ushort)(dosTime & 0x0FFFF);
             }
         }
     }

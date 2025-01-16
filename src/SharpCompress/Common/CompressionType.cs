@@ -14,5 +14,12 @@ public enum CompressionType
     LZip,
     Xz,
     Unknown,
-    Deflate64
+    Deflate64,
+    Shrink,
+    Lzw,
+    Reduce1,
+    Reduce2,
+    Reduce3,
+    Reduce4,
+    Explode,
 }

@@ -1,13 +1,13 @@
-﻿#if !Rar2017_64bit
+using System;
+using System.IO;
+using SharpCompress.Common.Rar.Headers;
+#if !Rar2017_64bit
 using size_t = System.UInt32;
 #else
 using nint = System.Int64;
 using nuint = System.UInt64;
 using size_t = System.UInt64;
 #endif
-using System;
-using System.IO;
-using SharpCompress.Common.Rar.Headers;
 
 namespace SharpCompress.Compressors.Rar.UnpackV2017;
 
@@ -67,15 +67,15 @@ internal partial class Unpack : IRarUnpack
 
     private void UnstoreFile()
     {
-        var b = new byte[0x10000];
+        Span<byte> b = stackalloc byte[(int)Math.Min(0x10000, DestUnpSize)];
         do
         {
-            var n = readStream.Read(b, 0, (int)Math.Min(b.Length, DestUnpSize));
+            var n = readStream.Read(b);
             if (n == 0)
             {
                 break;
             }
-            writeStream.Write(b, 0, n);
+            writeStream.Write(b.Slice(0, n));
             DestUnpSize -= n;
         } while (!Suspended);
     }

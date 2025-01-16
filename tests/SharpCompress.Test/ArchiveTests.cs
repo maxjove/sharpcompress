@@ -73,27 +73,45 @@ public class ArchiveTests : ReaderTests
         }
     }
 
-    protected void ArchiveStreamRead(string testArchive, ReaderOptions? readerOptions = null)
+    protected void ArchiveStreamRead(string testArchive, ReaderOptions? readerOptions = null) =>
+        ArchiveStreamRead(ArchiveFactory.AutoFactory, testArchive, readerOptions);
+
+    protected void ArchiveStreamRead(
+        IArchiveFactory archiveFactory,
+        string testArchive,
+        ReaderOptions? readerOptions = null
+    )
     {
         testArchive = Path.Combine(TEST_ARCHIVES_PATH, testArchive);
-        ArchiveStreamRead(readerOptions, testArchive);
+        ArchiveStreamRead(archiveFactory, readerOptions, testArchive);
     }
 
     protected void ArchiveStreamRead(
         ReaderOptions? readerOptions = null,
         params string[] testArchives
+    ) => ArchiveStreamRead(ArchiveFactory.AutoFactory, readerOptions, testArchives);
+
+    protected void ArchiveStreamRead(
+        IArchiveFactory archiveFactory,
+        ReaderOptions? readerOptions = null,
+        params string[] testArchives
     ) =>
         ArchiveStreamRead(
+            archiveFactory,
             readerOptions,
             testArchives.Select(x => Path.Combine(TEST_ARCHIVES_PATH, x))
         );
 
-    protected void ArchiveStreamRead(ReaderOptions? readerOptions, IEnumerable<string> testArchives)
+    protected void ArchiveStreamRead(
+        IArchiveFactory archiveFactory,
+        ReaderOptions? readerOptions,
+        IEnumerable<string> testArchives
+    )
     {
         foreach (var path in testArchives)
         {
             using (var stream = NonDisposingStream.Create(File.OpenRead(path), true))
-            using (var archive = ArchiveFactory.Open(stream, readerOptions))
+            using (var archive = archiveFactory.Open(stream, readerOptions))
             {
                 try
                 {
@@ -101,7 +119,7 @@ public class ArchiveTests : ReaderTests
                     {
                         entry.WriteToDirectory(
                             SCRATCH_FILES_PATH,
-                            new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                            new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                         );
                     }
                 }
@@ -138,19 +156,12 @@ public class ArchiveTests : ReaderTests
             )
         )
         {
-            try
+            foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
             {
-                foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
-                {
-                    entry.WriteToDirectory(
-                        SCRATCH_FILES_PATH,
-                        new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
-                    );
-                }
-            }
-            catch (IndexOutOfRangeException)
-            {
-                throw;
+                entry.WriteToDirectory(
+                    SCRATCH_FILES_PATH,
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
+                );
             }
         }
         VerifyFiles();
@@ -177,19 +188,12 @@ public class ArchiveTests : ReaderTests
             )
         )
         {
-            try
+            foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
             {
-                foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
-                {
-                    entry.WriteToDirectory(
-                        SCRATCH_FILES_PATH,
-                        new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
-                    );
-                }
-            }
-            catch (IndexOutOfRangeException)
-            {
-                throw;
+                entry.WriteToDirectory(
+                    SCRATCH_FILES_PATH,
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
+                );
             }
         }
         VerifyFiles();
@@ -206,56 +210,72 @@ public class ArchiveTests : ReaderTests
             testArchives.Select(x => Path.Combine(TEST_ARCHIVES_PATH, x))
         );
 
-    protected void ArchiveOpenEntryVolumeIndexTest(
+    private void ArchiveOpenEntryVolumeIndexTest(
         int[][] results,
         ReaderOptions? readerOptions,
         IEnumerable<string> testArchives
     )
     {
         var src = testArchives.ToArray();
-        using var archive = ArchiveFactory.Open(
-            testArchives.Select(f => new FileInfo(f)),
-            readerOptions
-        );
-        try
+        using var archive = ArchiveFactory.Open(src.Select(f => new FileInfo(f)), readerOptions);
+        var idx = 0;
+        foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
         {
-            var idx = 0;
-            foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
-            {
-                Assert.Equal(entry.VolumeIndexFirst, results[idx][0]);
-                Assert.Equal(entry.VolumeIndexLast, results[idx][1]);
-                Assert.Equal(
-                    src[entry.VolumeIndexFirst],
-                    archive.Volumes.First(a => a.Index == entry.VolumeIndexFirst).FileName
-                );
-                Assert.Equal(
-                    src[entry.VolumeIndexLast],
-                    archive.Volumes.First(a => a.Index == entry.VolumeIndexLast).FileName
-                );
+            Assert.Equal(entry.VolumeIndexFirst, results[idx][0]);
+            Assert.Equal(entry.VolumeIndexLast, results[idx][1]);
+            Assert.Equal(
+                src[entry.VolumeIndexFirst],
+                archive.Volumes.First(a => a.Index == entry.VolumeIndexFirst).FileName
+            );
+            Assert.Equal(
+                src[entry.VolumeIndexLast],
+                archive.Volumes.First(a => a.Index == entry.VolumeIndexLast).FileName
+            );
 
-                idx++;
-            }
-        }
-        catch (IndexOutOfRangeException)
-        {
-            throw;
+            idx++;
         }
     }
 
-    protected void ArchiveFileRead(string testArchive, ReaderOptions? readerOptions = null)
+    protected void ArchiveFileRead(
+        IArchiveFactory archiveFactory,
+        string testArchive,
+        ReaderOptions? readerOptions = null
+    )
     {
         testArchive = Path.Combine(TEST_ARCHIVES_PATH, testArchive);
-        using (var archive = ArchiveFactory.Open(testArchive, readerOptions))
+        using (var archive = archiveFactory.Open(new FileInfo(testArchive), readerOptions))
         {
             foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
             {
                 entry.WriteToDirectory(
                     SCRATCH_FILES_PATH,
-                    new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                 );
             }
         }
         VerifyFiles();
+    }
+
+    protected void ArchiveFileRead(string testArchive, ReaderOptions? readerOptions = null) =>
+        ArchiveFileRead(ArchiveFactory.AutoFactory, testArchive, readerOptions);
+
+    protected void ArchiveFileSkip(
+        string testArchive,
+        string fileOrder,
+        ReaderOptions? readerOptions = null
+    )
+    {
+        if (!Environment.OSVersion.IsWindows())
+        {
+            fileOrder = fileOrder.Replace('\\', '/');
+        }
+        var expected = new Stack<string>(fileOrder.Split(' '));
+        testArchive = Path.Combine(TEST_ARCHIVES_PATH, testArchive);
+        using var archive = ArchiveFactory.Open(testArchive, readerOptions);
+        foreach (var entry in archive.Entries)
+        {
+            Assert.Equal(expected.Pop(), entry.Key);
+        }
     }
 
     /// <summary>
@@ -270,16 +290,41 @@ public class ArchiveTests : ReaderTests
             {
                 entry.WriteToDirectory(
                     SCRATCH_FILES_PATH,
-                    new ExtractionOptions()
+                    new ExtractionOptions
                     {
                         ExtractFullPath = true,
                         Overwrite = true,
                         PreserveAttributes = true,
-                        PreserveFileTime = true
+                        PreserveFileTime = true,
                     }
                 );
             }
         }
         VerifyFilesEx();
+    }
+
+    protected void ArchiveDeltaDistanceRead(string testArchive)
+    {
+        testArchive = Path.Combine(TEST_ARCHIVES_PATH, testArchive);
+        using var archive = ArchiveFactory.Open(testArchive);
+        using var reader = archive.ExtractAllEntries();
+        while (reader.MoveToNextEntry())
+        {
+            if (!reader.Entry.IsDirectory)
+            {
+                var memory = new MemoryStream();
+                reader.WriteEntryTo(memory);
+
+                memory.Position = 0;
+
+                for (var y = 0; y < 9; y++)
+                for (var x = 0; x < 256; x++)
+                {
+                    Assert.Equal(x, memory.ReadByte());
+                }
+
+                Assert.Equal(-1, memory.ReadByte());
+            }
+        }
     }
 }

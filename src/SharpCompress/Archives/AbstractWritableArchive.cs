@@ -31,17 +31,18 @@ public abstract class AbstractWritableArchive<TEntry, TVolume>
         }
     }
 
-    private readonly List<TEntry> newEntries = new List<TEntry>();
-    private readonly List<TEntry> removedEntries = new List<TEntry>();
+    private readonly List<TEntry> newEntries = new();
+    private readonly List<TEntry> removedEntries = new();
 
-    private readonly List<TEntry> modifiedEntries = new List<TEntry>();
+    private readonly List<TEntry> modifiedEntries = new();
     private bool hasModifications;
     private bool pauseRebuilding;
 
-    internal AbstractWritableArchive(ArchiveType type) : base(type) { }
+    internal AbstractWritableArchive(ArchiveType type)
+        : base(type) { }
 
-    internal AbstractWritableArchive(ArchiveType type, SourceStream srcStream)
-        : base(type, srcStream) { }
+    internal AbstractWritableArchive(ArchiveType type, SourceStream sourceStream)
+        : base(type, sourceStream) { }
 
     public override ICollection<TEntry> Entries
     {
@@ -119,6 +120,10 @@ public abstract class AbstractWritableArchive<TEntry, TVolume>
     {
         foreach (var path in Entries.Select(x => x.Key))
         {
+            if (path is null)
+            {
+                continue;
+            }
             var p = path.Replace('/', '\\');
             if (p.Length > 0 && p[0] == '\\')
             {

@@ -2,11 +2,13 @@ using System;
 using System.IO;
 
 namespace SharpCompress.IO;
+
 internal class ReadOnlySubStream : NonDisposingStream
 {
     private long _position;
 
-    public ReadOnlySubStream(Stream stream, long bytesToRead) : this(stream, null, bytesToRead) { }
+    public ReadOnlySubStream(Stream stream, long bytesToRead)
+        : this(stream, null, bytesToRead) { }
 
     public ReadOnlySubStream(Stream stream, long? origin, long bytesToRead)
         : base(stream, throwOnDispose: false)
@@ -27,7 +29,7 @@ internal class ReadOnlySubStream : NonDisposingStream
 
     public override bool CanWrite => false;
 
-    public override void Flush() => throw new NotSupportedException();
+    public override void Flush() { }
 
     public override long Length => throw new NotSupportedException();
 
@@ -70,8 +72,8 @@ internal class ReadOnlySubStream : NonDisposingStream
 #if !NETFRAMEWORK && !NETSTANDARD2_0
     public override int Read(Span<byte> buffer)
     {
-        var slice_len = BytesLeftToRead < buffer.Length ? BytesLeftToRead : buffer.Length;
-        var read = Stream.Read(buffer.Slice(0, (int)slice_len));
+        var sliceLen = BytesLeftToRead < buffer.Length ? BytesLeftToRead : buffer.Length;
+        var read = Stream.Read(buffer.Slice(0, (int)sliceLen));
         if (read > 0)
         {
             BytesLeftToRead -= read;

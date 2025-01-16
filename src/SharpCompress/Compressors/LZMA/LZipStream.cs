@@ -63,18 +63,18 @@ public sealed class LZipStream : Stream
                 var crc32Stream = (Crc32Stream)_stream;
                 crc32Stream.WrappedStream.Dispose();
                 crc32Stream.Dispose();
-                var compressedCount = _countingWritableSubStream!.Count;
+                var compressedCount = _countingWritableSubStream.NotNull().Count;
 
                 Span<byte> intBuf = stackalloc byte[8];
                 BinaryPrimitives.WriteUInt32LittleEndian(intBuf, crc32Stream.Crc);
-                _countingWritableSubStream.Write(intBuf.Slice(0, 4));
+                _countingWritableSubStream?.Write(intBuf.Slice(0, 4));
 
                 BinaryPrimitives.WriteInt64LittleEndian(intBuf, _writeCount);
-                _countingWritableSubStream.Write(intBuf);
+                _countingWritableSubStream?.Write(intBuf);
 
                 //total with headers
                 BinaryPrimitives.WriteUInt64LittleEndian(intBuf, compressedCount + 6 + 20);
-                _countingWritableSubStream.Write(intBuf);
+                _countingWritableSubStream?.Write(intBuf);
             }
             _finished = true;
         }
@@ -205,7 +205,7 @@ public sealed class LZipStream : Stream
         (byte)'I',
         (byte)'P',
         1,
-        113
+        113,
     };
 
     public static void WriteHeaderSize(Stream stream)
@@ -235,6 +235,6 @@ public sealed class LZipStream : Stream
             (byte)(dictionarySize & 0xff),
             (byte)((dictionarySize >> 8) & 0xff),
             (byte)((dictionarySize >> 16) & 0xff),
-            (byte)((dictionarySize >> 24) & 0xff)
+            (byte)((dictionarySize >> 24) & 0xff),
         };
 }

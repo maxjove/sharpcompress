@@ -1,5 +1,3 @@
-#nullable disable
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,7 +19,8 @@ internal sealed class TarWritableArchiveEntry : TarArchiveEntry, IWritableArchiv
         long size,
         DateTime? lastModified,
         bool closeStream
-    ) : base(archive, null, compressionType)
+    )
+        : base(archive, null, compressionType)
     {
         this.stream = stream;
         Key = path;

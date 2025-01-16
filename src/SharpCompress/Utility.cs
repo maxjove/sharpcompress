@@ -1,16 +1,17 @@
+global using SharpCompress.Helpers;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Text;
 using SharpCompress.Readers;
 
-namespace SharpCompress;
+namespace SharpCompress.Helpers;
 
-[CLSCompliant(false)]
-public static class Utility
+internal static class Utility
 {
-    public static ReadOnlyCollection<T> ToReadOnly<T>(this ICollection<T> items) =>
-        new ReadOnlyCollection<T>(items);
+    public static ReadOnlyCollection<T> ToReadOnly<T>(this IList<T> items) => new(items);
 
     /// <summary>
     /// Performs an unsigned bitwise right shift with the specified number
@@ -278,8 +279,42 @@ public static class Utility
             long total = 0;
             while (ReadTransferBlock(source, array, out var count))
             {
-                total += count;
                 destination.Write(array, 0, count);
+                total += count;
+            }
+            return total;
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(array);
+        }
+    }
+
+    public static long TransferTo(this Stream source, Stream destination, long maxLength)
+    {
+        var array = GetTransferByteArray();
+        var maxReadSize = array.Length;
+        try
+        {
+            long total = 0;
+            var remaining = maxLength;
+            if (remaining < maxReadSize)
+            {
+                maxReadSize = (int)remaining;
+            }
+            while (ReadTransferBlock(source, array, maxReadSize, out var count))
+            {
+                destination.Write(array, 0, count);
+                total += count;
+                if (remaining - count < 0)
+                {
+                    break;
+                }
+                remaining -= count;
+                if (remaining < maxReadSize)
+                {
+                    maxReadSize = (int)remaining;
+                }
             }
             return total;
         }
@@ -318,6 +353,16 @@ public static class Utility
 
     private static bool ReadTransferBlock(Stream source, byte[] array, out int count) =>
         (count = source.Read(array, 0, array.Length)) != 0;
+
+    private static bool ReadTransferBlock(Stream source, byte[] array, int size, out int count)
+    {
+        if (size > array.Length)
+        {
+            size = array.Length;
+        }
+        count = source.Read(array, 0, size);
+        return count != 0;
+    }
 
     private static byte[] GetTransferByteArray() => ArrayPool<byte>.Shared.Rent(81920);
 
@@ -390,5 +435,18 @@ public static class Utility
         buffer[offset + 1] = (byte)(number >> 16);
         buffer[offset + 2] = (byte)(number >> 8);
         buffer[offset + 3] = (byte)number;
+    }
+
+    public static string ReplaceInvalidFileNameChars(string fileName)
+    {
+        var invalidChars = new HashSet<char>(Path.GetInvalidFileNameChars());
+        var sb = new StringBuilder(fileName.Length);
+        foreach (var c in fileName)
+        {
+            var newChar = invalidChars.Contains(c) ? '_' : c;
+            sb.Append(newChar);
+        }
+
+        return sb.ToString();
     }
 }

@@ -7,16 +7,21 @@ using SharpCompress.Compressors;
 using SharpCompress.Compressors.BZip2;
 using SharpCompress.Compressors.Deflate;
 using SharpCompress.Compressors.Deflate64;
+using SharpCompress.Compressors.Explode;
 using SharpCompress.Compressors.LZMA;
 using SharpCompress.Compressors.PPMd;
+using SharpCompress.Compressors.Reduce;
+using SharpCompress.Compressors.Shrink;
 using SharpCompress.Compressors.Xz;
 using SharpCompress.IO;
+using ZstdSharp;
 
 namespace SharpCompress.Common.Zip;
 
 internal abstract class ZipFilePart : FilePart
 {
-    internal ZipFilePart(ZipFileEntry header, Stream stream) : base(header.ArchiveEncoding)
+    internal ZipFilePart(ZipFileEntry header, Stream stream)
+        : base(header.ArchiveEncoding)
     {
         Header = header;
         header.Part = this;
@@ -26,7 +31,7 @@ internal abstract class ZipFilePart : FilePart
     internal Stream BaseStream { get; }
     internal ZipFileEntry Header { get; set; }
 
-    internal override string FilePartName => Header.Name;
+    internal override string? FilePartName => Header.Name;
 
     internal override Stream GetCompressedStream()
     {
@@ -65,18 +70,53 @@ internal abstract class ZipFilePart : FilePart
         {
             case ZipCompressionMethod.None:
             {
-                if( stream is ReadOnlySubStream )
+                if (stream is ReadOnlySubStream)
                 {
                     return stream;
                 }
 
-                if( Header.CompressedSize > 0 )
+                if (Header.CompressedSize > 0)
                 {
                     return new ReadOnlySubStream(stream, Header.CompressedSize);
                 }
 
                 return new DataDescriptorStream(stream);
             }
+            case ZipCompressionMethod.Shrink:
+            {
+                return new ShrinkStream(
+                    stream,
+                    CompressionMode.Decompress,
+                    Header.CompressedSize,
+                    Header.UncompressedSize
+                );
+            }
+            case ZipCompressionMethod.Reduce1:
+            {
+                return new ReduceStream(stream, Header.CompressedSize, Header.UncompressedSize, 1);
+            }
+            case ZipCompressionMethod.Reduce2:
+            {
+                return new ReduceStream(stream, Header.CompressedSize, Header.UncompressedSize, 2);
+            }
+            case ZipCompressionMethod.Reduce3:
+            {
+                return new ReduceStream(stream, Header.CompressedSize, Header.UncompressedSize, 3);
+            }
+            case ZipCompressionMethod.Reduce4:
+            {
+                return new ReduceStream(stream, Header.CompressedSize, Header.UncompressedSize, 4);
+            }
+            case ZipCompressionMethod.Explode:
+            {
+                return new ExplodeStream(
+                    stream,
+                    Header.CompressedSize,
+                    Header.UncompressedSize,
+                    Header.Flags
+                );
+            }
+
             case ZipCompressionMethod.Deflate:
             {
                 return new DeflateStream(stream, CompressionMode.Decompress);
@@ -111,6 +151,10 @@ internal abstract class ZipFilePart : FilePart
             case ZipCompressionMethod.Xz:
             {
                 return new XZStream(stream);
+            }
+            case ZipCompressionMethod.ZStd:
+            {
+                return new DecompressionStream(stream);
             }
             case ZipCompressionMethod.PPMd:
             {
@@ -186,6 +230,11 @@ internal abstract class ZipFilePart : FilePart
             switch (Header.CompressionMethod)
             {
                 case ZipCompressionMethod.None:
+                case ZipCompressionMethod.Shrink:
+                case ZipCompressionMethod.Reduce1:
+                case ZipCompressionMethod.Reduce2:
+                case ZipCompressionMethod.Reduce3:
+                case ZipCompressionMethod.Reduce4:
                 case ZipCompressionMethod.Deflate:
                 case ZipCompressionMethod.Deflate64:
                 case ZipCompressionMethod.BZip2:

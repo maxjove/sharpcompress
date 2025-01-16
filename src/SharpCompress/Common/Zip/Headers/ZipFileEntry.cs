@@ -1,5 +1,3 @@
-#nullable disable
-
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
@@ -9,7 +7,8 @@ namespace SharpCompress.Common.Zip.Headers;
 
 internal abstract class ZipFileEntry : ZipHeader
 {
-    protected ZipFileEntry(ZipHeaderType type, ArchiveEncoding archiveEncoding) : base(type)
+    protected ZipFileEntry(ZipHeaderType type, ArchiveEncoding archiveEncoding)
+        : base(type)
     {
         Extra = new List<ExtraData>();
         ArchiveEncoding = archiveEncoding;
@@ -19,21 +18,21 @@ internal abstract class ZipFileEntry : ZipHeader
     {
         get
         {
-            if (Name.EndsWith('/'))
+            if (Name?.EndsWith('/') ?? false)
             {
                 return true;
             }
 
             //.NET Framework 4.5 : System.IO.Compression::CreateFromDirectory() probably writes backslashes to headers
-            return CompressedSize == 0 && UncompressedSize == 0 && Name.EndsWith('\\');
+            return CompressedSize == 0 && UncompressedSize == 0 && (Name?.EndsWith('\\') ?? false);
         }
     }
 
-    internal Stream PackedStream { get; set; }
+    internal Stream? PackedStream { get; set; }
 
     internal ArchiveEncoding ArchiveEncoding { get; }
 
-    internal string Name { get; set; }
+    internal string? Name { get; set; }
 
     internal HeaderFlags Flags { get; set; }
 
@@ -47,7 +46,7 @@ internal abstract class ZipFileEntry : ZipHeader
 
     internal List<ExtraData> Extra { get; set; }
 
-    public string Password { get; set; }
+    public string? Password { get; set; }
 
     internal PkwareTraditionalEncryptionData ComposeEncryptionData(Stream archiveStream)
     {
@@ -64,10 +63,28 @@ internal abstract class ZipFileEntry : ZipHeader
         return encryptionData;
     }
 
-    internal WinzipAesEncryptionData WinzipAesEncryptionData { get; set; }
+    internal WinzipAesEncryptionData? WinzipAesEncryptionData { get; set; }
 
+    /// <summary>
+    /// The last modified date as read from the Local or Central Directory header.
+    /// </summary>
+    internal ushort OriginalLastModifiedDate { get; set; }
+
+    /// <summary>
+    /// The last modified date from the UnixTimeExtraField, if present, or the
+    /// Local or Cental Directory header, if not.
+    /// </summary>
     internal ushort LastModifiedDate { get; set; }
 
+    /// <summary>
+    /// The last modified time as read from the Local or Central Directory header.
+    /// </summary>
+    internal ushort OriginalLastModifiedTime { get; set; }
+
+    /// <summary>
+    /// The last modified time from the UnixTimeExtraField, if present, or the
+    /// Local or Cental Directory header, if not.
+    /// </summary>
     internal ushort LastModifiedTime { get; set; }
 
     internal uint Crc { get; set; }
@@ -100,7 +117,7 @@ internal abstract class ZipFileEntry : ZipHeader
         }
     }
 
-    internal ZipFilePart Part { get; set; }
+    internal ZipFilePart? Part { get; set; }
 
     internal bool IsZip64 => CompressedSize >= uint.MaxValue;
 }

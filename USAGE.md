@@ -27,11 +27,23 @@ To deal with the "correct" rules as well as the expectations of users, I've deci
 
 To be explicit though, consider always using the overloads that use `ReaderOptions` or `WriterOptions` and explicitly set `LeaveStreamOpen` the way you want.
 
-If using Compression Stream classes directly and you don't want the wrapped stream to be closed.  Use the `NonDisposingStream` as a wrapped to prevent the stream being disposed.  The change in 0.21 simplified a lot even though the usage is a bit more convoluted.
+If using Compression Stream classes directly and you don't want the wrapped stream to be closed.  Use the `NonDisposingStream` as a wrapper to prevent the stream being disposed.  The change in 0.21 simplified a lot even though the usage is a bit more convoluted.
 
 ## Samples
 
 Also, look over the tests for more thorough [examples](https://github.com/adamhathcock/sharpcompress/tree/master/tests/SharpCompress.Test)
+
+### Create Zip Archive from multiple files
+```C#
+using(var archive = ZipArchive.Create())
+{
+    archive.AddEntry("file01.txt", "C:\\file01.txt");
+    archive.AddEntry("file02.txt", "C:\\file02.txt");
+    ...
+    
+    archive.SaveTo("C:\\temp.zip", CompressionType.Deflate);
+}
+```
 
 ### Create Zip Archive from all files in a directory to a file
 

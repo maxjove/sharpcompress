@@ -1,11 +1,12 @@
 # SharpCompress
 
-SharpCompress is a compression library in pure C# for .NET Standard 2.0, 2.1, .NET Core 3.1 and .NET 5.0 that can unrar, un7zip, unzip, untar unbzip2, ungzip, unlzip with forward-only reading and file random access APIs. Write support for zip/tar/bzip2/gzip/lzip are implemented.
+SharpCompress is a compression library in pure C# for .NET Framework 4.62, .NET Standard 2.1, .NET 6.0 and NET 8.0 that can unrar, un7zip, unzip, untar unbzip2, ungzip, unlzip with forward-only reading and file random access APIs. Write support for zip/tar/bzip2/gzip/lzip are implemented.
 
 The major feature is support for non-seekable streams so large files can be processed on the fly (i.e. download stream).
 
 GitHub Actions Build -
-[![GitHubActions](https://github.com/adamhathcock/sharpcompress/workflows/SharpCompress/badge.svg)](https://circleci.com/gh/adamhathcock/sharpcompress)
+[![SharpCompress](https://github.com/adamhathcock/sharpcompress/actions/workflows/dotnetcore.yml/badge.svg)](https://github.com/adamhathcock/sharpcompress/actions/workflows/dotnetcore.yml)
+[![Static Badge](https://img.shields.io/badge/API%20Docs-DNDocs-190088?logo=readme&logoColor=white)](https://dndocs.com/d/sharpcompress/api/index.html)
 
 ## Need Help?
 
@@ -35,12 +36,14 @@ I'm always looking for help or ideas. Please submit code or email with ideas. Un
 
 ## TODOs (always lots)
 
-* RAR 5 decryption support
+* RAR 5 decryption crc check support
 * 7Zip writing
 * Zip64 (Need writing and extend Reading)
 * Multi-volume Zip support.
 
 ## Version Log
+
+* [Releases](https://github.com/adamhathcock/sharpcompress/releases)
 
 ### Version 0.18
 

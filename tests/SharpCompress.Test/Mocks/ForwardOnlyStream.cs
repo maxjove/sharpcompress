@@ -1,15 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace SharpCompress.Test.Mocks;
 
-public class ForwardOnlyStream : Stream
+public class ForwardOnlyStream(Stream stream) : Stream
 {
-    private readonly Stream stream;
-
     public bool IsDisposed { get; private set; }
-
-    public ForwardOnlyStream(Stream stream) => this.stream = stream;
 
     protected override void Dispose(bool disposing)
     {
@@ -29,13 +25,13 @@ public class ForwardOnlyStream : Stream
     public override bool CanSeek => false;
     public override bool CanWrite => false;
 
-    public override void Flush() => throw new NotSupportedException();
+    public override void Flush() { }
 
     public override long Length => throw new NotSupportedException();
 
     public override long Position
     {
-        get => throw new NotSupportedException();
+        get => stream.Position;
         set => throw new NotSupportedException();
     }
 

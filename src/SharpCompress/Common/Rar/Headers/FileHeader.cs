@@ -1,5 +1,11 @@
 #nullable disable
 
+using System;
+using System.IO;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using SharpCompress.IO;
 #if !Rar2017_64bit
 using size_t = System.UInt32;
 #else
@@ -8,16 +14,11 @@ using nuint = System.UInt64;
 using size_t = System.UInt64;
 #endif
 
-using SharpCompress.IO;
-using System;
-using System.IO;
-using System.Text;
-
 namespace SharpCompress.Common.Rar.Headers;
 
 internal class FileHeader : RarHeader
 {
-    private uint _fileCrc;
+    private byte[] _hash;
 
     public FileHeader(RarHeader header, RarCrcBinaryReader reader, HeaderType headerType)
         : base(header, reader, headerType) { }
@@ -52,7 +53,7 @@ internal class FileHeader : RarHeader
 
         if (HasFlag(FileFlagsV5.HAS_CRC32))
         {
-            FileCrc = reader.ReadUInt32();
+            FileCrc = reader.ReadBytes(4);
         }
 
         var compressionInfo = reader.ReadRarVIntUInt16();
@@ -104,7 +105,13 @@ internal class FileHeader : RarHeader
             throw new InvalidFormatException("rar5 header size / extra size inconsistency");
         }
 
-        isEncryptedRar5 = false;
+        const ushort FHEXTRA_CRYPT = 0x01;
+        const ushort FHEXTRA_HASH = 0x02;
+        const ushort FHEXTRA_HTIME = 0x03;
+        // const ushort FHEXTRA_VERSION = 0x04;
+        const ushort FHEXTRA_REDIR = 0x05;
+        // const ushort FHEXTRA_UOWNER = 0x06;
+        // const ushort FHEXTRA_SUBDATA = 0x07;
 
         while (RemainingHeaderBytes(reader) > 0)
         {
@@ -113,23 +120,30 @@ internal class FileHeader : RarHeader
             var type = reader.ReadRarVIntUInt16();
             switch (type)
             {
-                //TODO
-                case 1: // file encryption
-
+                case FHEXTRA_CRYPT: // file encryption
                     {
-                        isEncryptedRar5 = true;
+                        Rar5CryptoInfo = new Rar5CryptoInfo(reader, true);
 
-                        //var version = reader.ReadRarVIntByte();
-                        //if (version != 0) throw new InvalidFormatException("unknown encryption algorithm " + version);
+                        if (Rar5CryptoInfo.PswCheck.All(singleByte => singleByte == 0))
+                        {
+                            Rar5CryptoInfo = null;
+                        }
                     }
                     break;
-                //                    case 2: // file hash
-                //                        {
-                //
-                //                        }
-                //                        break;
-                case 3: // file time
-
+                case FHEXTRA_HASH:
+                    {
+                        const uint FHEXTRA_HASH_BLAKE2 = 0x0;
+                        //                        const uint HASH_BLAKE2 = 0x03;
+                        const int BLAKE2_DIGEST_SIZE = 0x20;
+                        if ((uint)reader.ReadRarVInt() == FHEXTRA_HASH_BLAKE2)
+                        {
+                            //                            var hash = HASH_BLAKE2;
+                            _hash = reader.ReadBytes(BLAKE2_DIGEST_SIZE);
+                        }
+                        // enum HASH_TYPE {HASH_NONE,HASH_RAR14,HASH_CRC32,HASH_BLAKE2};
+                    }
+                    break;
+                case FHEXTRA_HTIME: // file time
                     {
                         var flags = reader.ReadRarVIntUInt16();
                         var isWindowsTime = (flags & 1) == 0;
@@ -148,22 +162,27 @@ internal class FileHeader : RarHeader
                     }
                     break;
                 //TODO
-                //                    case 4: // file version
+                //                    case FHEXTRA_VERSION: // file version
                 //                        {
                 //
                 //                        }
                 //                        break;
-                //                    case 5: // file system redirection
+                case FHEXTRA_REDIR: // file system redirection
+                    {
+                        RedirType = reader.ReadRarVIntByte();
+                        RedirFlags = reader.ReadRarVIntByte();
+                        var nn = reader.ReadRarVIntUInt16();
+                        var bb = reader.ReadBytes(nn);
+                        RedirTargetName = ConvertPathV5(Encoding.UTF8.GetString(bb, 0, bb.Length));
+                    }
+                    break;
+                //TODO
+                //                    case FHEXTRA_UOWNER: // unix owner
                 //                        {
                 //
                 //                        }
                 //                        break;
-                //                    case 6: // unix owner
-                //                        {
-                //
-                //                        }
-                //                        break;
-                //                    case 7: // service data
+                //                    case FHEXTRA_SUBDATA: // service data
                 //                        {
                 //
                 //                        }
@@ -171,6 +190,7 @@ internal class FileHeader : RarHeader
 
                 default:
                     // skip unknown record types to allow new record types to be added in the future
+                    //Console.WriteLine($"unhandled rar header field type {type}");
                     break;
             }
             // drain any trailing bytes of extra record
@@ -222,7 +242,7 @@ internal class FileHeader : RarHeader
 
         HostOs = reader.ReadByte();
 
-        FileCrc = reader.ReadUInt32();
+        FileCrc = reader.ReadBytes(4);
 
         FileLastModifiedTime = Utility.DosDateToDateTime(reader.ReadUInt32());
 
@@ -255,13 +275,11 @@ internal class FileHeader : RarHeader
 
         var fileNameBytes = reader.ReadBytes(nameSize);
 
-        const int saltSize = 8;
         const int newLhdSize = 32;
 
         switch (HeaderCode)
         {
             case HeaderCodeV.RAR4_FILE_HEADER:
-
                 {
                     if (HasFlag(FileFlagsV4.UNICODE))
                     {
@@ -288,12 +306,11 @@ internal class FileHeader : RarHeader
                 }
                 break;
             case HeaderCodeV.RAR4_NEW_SUB_HEADER:
-
                 {
                     var datasize = HeaderSize - newLhdSize - nameSize;
                     if (HasFlag(FileFlagsV4.SALT))
                     {
-                        datasize -= saltSize;
+                        datasize -= EncryptionConstV5.SIZE_SALT30;
                     }
                     if (datasize > 0)
                     {
@@ -314,7 +331,7 @@ internal class FileHeader : RarHeader
 
         if (HasFlag(FileFlagsV4.SALT))
         {
-            R4Salt = reader.ReadBytes(saltSize);
+            R4Salt = reader.ReadBytes(EncryptionConstV5.SIZE_SALT30);
         }
         if (HasFlag(FileFlagsV4.EXT_TIME))
         {
@@ -395,18 +412,10 @@ internal class FileHeader : RarHeader
 
     private bool HasFlag(ushort flag) => (Flags & flag) == flag;
 
-    internal uint FileCrc
+    internal byte[] FileCrc
     {
-        get
-        {
-            if (IsRar5 && !HasFlag(FileFlagsV5.HAS_CRC32))
-            {
-                //!!! rar5:
-                throw new InvalidOperationException("TODO rar5");
-            }
-            return _fileCrc;
-        }
-        private set => _fileCrc = value;
+        get => _hash;
+        private set => _hash = value;
     }
 
     // 0 - storing
@@ -428,11 +437,17 @@ internal class FileHeader : RarHeader
 
     public bool IsSolid { get; private set; }
 
+    public byte RedirType { get; private set; }
+    public bool IsRedir => RedirType != 0;
+    public byte RedirFlags { get; private set; }
+    public bool IsRedirDirectory => (RedirFlags & RedirFlagV5.DIRECTORY) != 0;
+    public string RedirTargetName { get; private set; }
+
     // unused for UnpackV1 implementation (limitation)
     internal size_t WindowSize { get; private set; }
 
     internal byte[] R4Salt { get; private set; }
-
+    internal Rar5CryptoInfo Rar5CryptoInfo { get; private set; }
     private byte HostOs { get; set; }
     internal uint FileAttributes { get; private set; }
     internal long CompressedSize { get; private set; }
@@ -450,8 +465,7 @@ internal class FileHeader : RarHeader
 
     public bool IsDirectory => HasFlag(IsRar5 ? FileFlagsV5.DIRECTORY : FileFlagsV4.DIRECTORY);
 
-    private bool isEncryptedRar5 = false;
-    public bool IsEncrypted => IsRar5 ? isEncryptedRar5 : HasFlag(FileFlagsV4.PASSWORD);
+    public bool IsEncrypted => IsRar5 ? Rar5CryptoInfo != null : HasFlag(FileFlagsV4.PASSWORD);
 
     internal DateTime? FileLastModifiedTime { get; private set; }
 

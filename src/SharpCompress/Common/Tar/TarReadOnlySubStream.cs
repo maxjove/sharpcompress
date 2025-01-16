@@ -1,6 +1,6 @@
-﻿using SharpCompress.IO;
 using System;
 using System.IO;
+using SharpCompress.IO;
 
 namespace SharpCompress.Common.Tar;
 
@@ -47,7 +47,7 @@ internal class TarReadOnlySubStream : NonDisposingStream
 
     public override bool CanWrite => false;
 
-    public override void Flush() => throw new NotSupportedException();
+    public override void Flush() { }
 
     public override long Length => throw new NotSupportedException();
 
@@ -63,7 +63,7 @@ internal class TarReadOnlySubStream : NonDisposingStream
         {
             count = (int)BytesLeftToRead;
         }
-        int read = Stream.Read(buffer, offset, count);
+        var read = Stream.Read(buffer, offset, count);
         if (read > 0)
         {
             BytesLeftToRead -= read;
@@ -78,7 +78,7 @@ internal class TarReadOnlySubStream : NonDisposingStream
         {
             return -1;
         }
-        int value = Stream.ReadByte();
+        var value = Stream.ReadByte();
         if (value != -1)
         {
             --BytesLeftToRead;

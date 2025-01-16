@@ -20,12 +20,12 @@ public abstract class RarEntry : Entry
     /// <summary>
     /// The File's 32 bit CRC Hash
     /// </summary>
-    public override long Crc => FileHeader.FileCrc;
+    public override long Crc => BitConverter.ToUInt32(FileHeader.FileCrc, 0);
 
     /// <summary>
     /// The path of the file internal to the Rar Archive.
     /// </summary>
-    public override string Key => FileHeader.FileName;
+    public override string? Key => FileHeader.FileName;
 
     public override string? LinkTarget => null;
 
@@ -55,11 +55,20 @@ public abstract class RarEntry : Entry
     public override bool IsEncrypted => FileHeader.IsEncrypted;
 
     /// <summary>
-    /// Entry is password protected and encrypted and cannot be extracted.
+    /// Entry Windows file attributes
+    /// </summary>
+    public override int? Attrib => (int)FileHeader.FileAttributes;
+
+    /// <summary>
+    /// Entry is a directory
     /// </summary>
     public override bool IsDirectory => FileHeader.IsDirectory;
 
     public override bool IsSplitAfter => FileHeader.IsSplitAfter;
+
+    public bool IsRedir => FileHeader.IsRedir;
+
+    public string RedirTargetName => FileHeader.RedirTargetName;
 
     public override string ToString() =>
         string.Format(

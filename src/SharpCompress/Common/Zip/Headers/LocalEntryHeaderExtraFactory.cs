@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Buffers.Binary;
 using System.Text;
 
@@ -13,7 +13,8 @@ internal enum ExtraDataType : ushort
     // Third Party Mappings
     // -Info-ZIP Unicode Path Extra Field
     UnicodePathExtraField = 0x7075,
-    Zip64ExtendedInformationExtraField = 0x0001
+    Zip64ExtendedInformationExtraField = 0x0001,
+    UnixTimeExtraField = 0x5455,
 }
 
 internal class ExtraData
@@ -145,15 +146,106 @@ internal sealed class Zip64ExtendedInformationExtraField : ExtraData
     public uint VolumeNumber { get; private set; }
 }
 
+internal sealed class UnixTimeExtraField : ExtraData
+{
+    public UnixTimeExtraField(ExtraDataType type, ushort length, byte[] dataBytes)
+        : base(type, length, dataBytes) { }
+
+    /// <summary>
+    /// The unix modified time, last access time, and creation time, if set.
+    /// </summary>
+    /// <remarks>Must return Tuple explicitly due to net462 support.</remarks>
+    internal Tuple<DateTime?, DateTime?, DateTime?> UnicodeTimes
+    {
+        get
+        {
+            // There has to be at least 5 byte for there to be a timestamp.
+            // 1 byte for flags and 4 bytes for a timestamp.
+            if (DataBytes is null || DataBytes.Length < 5)
+            {
+                return Tuple.Create<DateTime?, DateTime?, DateTime?>(null, null, null);
+            }
+
+            var flags = (RecordedTimeFlag)DataBytes[0];
+            var isModifiedTimeSpecified = flags.HasFlag(RecordedTimeFlag.LastModified);
+            var isLastAccessTimeSpecified = flags.HasFlag(RecordedTimeFlag.LastAccessed);
+            var isCreationTimeSpecified = flags.HasFlag(RecordedTimeFlag.Created);
+            var currentIndex = 1;
+            DateTime? modifiedTime = null;
+            DateTime? lastAccessTime = null;
+            DateTime? creationTime = null;
+
+            if (isModifiedTimeSpecified)
+            {
+                var modifiedEpochTime = BinaryPrimitives.ReadInt32LittleEndian(
+                    DataBytes.AsSpan(currentIndex, 4)
+                );
+
+                currentIndex += 4;
+                modifiedTime = DateTimeOffset.FromUnixTimeSeconds(modifiedEpochTime).UtcDateTime;
+            }
+
+            if (isLastAccessTimeSpecified)
+            {
+                if (currentIndex + 4 > DataBytes.Length)
+                {
+                    return Tuple.Create<DateTime?, DateTime?, DateTime?>(null, null, null);
+                }
+
+                var lastAccessEpochTime = BinaryPrimitives.ReadInt32LittleEndian(
+                    DataBytes.AsSpan(currentIndex, 4)
+                );
+
+                currentIndex += 4;
+                lastAccessTime = DateTimeOffset
+                    .FromUnixTimeSeconds(lastAccessEpochTime)
+                    .UtcDateTime;
+            }
+
+            if (isCreationTimeSpecified)
+            {
+                if (currentIndex + 4 > DataBytes.Length)
+                {
+                    return Tuple.Create<DateTime?, DateTime?, DateTime?>(null, null, null);
+                }
+
+                var creationTimeEpochTime = BinaryPrimitives.ReadInt32LittleEndian(
+                    DataBytes.AsSpan(currentIndex, 4)
+                );
+
+                currentIndex += 4;
+                creationTime = DateTimeOffset
+                    .FromUnixTimeSeconds(creationTimeEpochTime)
+                    .UtcDateTime;
+            }
+
+            return Tuple.Create(modifiedTime, lastAccessTime, creationTime);
+        }
+    }
+
+    [Flags]
+    private enum RecordedTimeFlag
+    {
+        None = 0,
+        LastModified = 1,
+        LastAccessed = 2,
+        Created = 4,
+    }
+}
+
 internal static class LocalEntryHeaderExtraFactory
 {
     internal static ExtraData Create(ExtraDataType type, ushort length, byte[] extraData) =>
         type switch
         {
-            ExtraDataType.UnicodePathExtraField
-                => new ExtraUnicodePathExtraField(type, length, extraData),
-            ExtraDataType.Zip64ExtendedInformationExtraField
-                => new Zip64ExtendedInformationExtraField(type, length, extraData),
-            _ => new ExtraData(type, length, extraData)
+            ExtraDataType.UnicodePathExtraField => new ExtraUnicodePathExtraField(
+                type,
+                length,
+                extraData
+            ),
+            ExtraDataType.Zip64ExtendedInformationExtraField =>
+                new Zip64ExtendedInformationExtraField(type, length, extraData),
+            ExtraDataType.UnixTimeExtraField => new UnixTimeExtraField(type, length, extraData),
+            _ => new ExtraData(type, length, extraData),
         };
 }

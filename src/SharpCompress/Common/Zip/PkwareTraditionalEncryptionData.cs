@@ -6,7 +6,7 @@ namespace SharpCompress.Common.Zip;
 
 internal class PkwareTraditionalEncryptionData
 {
-    private static readonly CRC32 CRC32 = new CRC32();
+    private static readonly CRC32 CRC32 = new();
     private readonly uint[] _keys = { 0x12345678, 0x23456789, 0x34567890 };
     private readonly ArchiveEncoding _archiveEncoding;
 
@@ -39,7 +39,7 @@ internal class PkwareTraditionalEncryptionData
             {
                 throw new CryptographicException("The password did not match.");
             }
-            if (plainTextHeader[11] != (byte)((header.LastModifiedTime >> 8) & 0xff))
+            if (plainTextHeader[11] != (byte)((header.OriginalLastModifiedTime >> 8) & 0xff))
             {
                 throw new CryptographicException("The password did not match.");
             }
@@ -103,7 +103,7 @@ internal class PkwareTraditionalEncryptionData
 
     internal byte[] StringToByteArray(string value)
     {
-        var a = _archiveEncoding.Password.GetBytes(value);
+        var a = _archiveEncoding.GetPasswordEncoding().GetBytes(value);
         return a;
     }
 

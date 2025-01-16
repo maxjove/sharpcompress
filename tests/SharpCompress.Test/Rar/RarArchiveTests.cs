@@ -22,11 +22,16 @@ public class RarArchiveTests : ArchiveTests
             () => ReadRarPassword("Rar.encrypted_filesAndHeader.rar", null)
         );
 
-    /*[Fact]
-    public void Rar5_EncryptedFileAndHeader_Archive()
-    {
+    [Fact]
+    public void Rar5_EncryptedFileAndHeader_Archive() =>
         ReadRarPassword("Rar5.encrypted_filesAndHeader.rar", "test");
-    }*/
+
+    [Fact]
+    public void Rar5_EncryptedFileAndHeader_Archive_Err() =>
+        Assert.Throws(
+            typeof(CryptographicException),
+            () => ReadRarPassword("Rar5.encrypted_filesAndHeader.rar", "failed")
+        );
 
     [Fact]
     public void Rar5_EncryptedFileAndHeader_NoPasswordExceptionTest() =>
@@ -39,20 +44,23 @@ public class RarArchiveTests : ArchiveTests
     public void Rar_EncryptedFileOnly_Archive() =>
         ReadRarPassword("Rar.encrypted_filesOnly.rar", "test");
 
-    /*[Fact]
-    public void Rar5_EncryptedFileOnly_Archive()
-    {
+    [Fact]
+    public void Rar_EncryptedFileOnly_Archive_Err() =>
+        Assert.Throws(
+            typeof(CryptographicException),
+            () => ReadRarPassword("Rar5.encrypted_filesOnly.rar", "failed")
+        );
+
+    [Fact]
+    public void Rar5_EncryptedFileOnly_Archive() =>
         ReadRarPassword("Rar5.encrypted_filesOnly.rar", "test");
-    }*/
 
     [Fact]
     public void Rar_Encrypted_Archive() => ReadRarPassword("Rar.Encrypted.rar", "test");
 
-    /*[Fact]
-    public void Rar5_Encrypted_Archive()
-    {
+    [Fact]
+    public void Rar5_Encrypted_Archive() =>
         ReadRarPassword("Rar5.encrypted_filesAndHeader.rar", "test");
-    }*/
 
     private void ReadRarPassword(string testArchive, string? password)
     {
@@ -60,7 +68,7 @@ public class RarArchiveTests : ArchiveTests
         using (
             var archive = RarArchive.Open(
                 stream,
-                new ReaderOptions() { Password = password, LeaveStreamOpen = true }
+                new ReaderOptions { Password = password, LeaveStreamOpen = true }
             )
         )
         {
@@ -71,7 +79,7 @@ public class RarArchiveTests : ArchiveTests
                     Assert.Equal(CompressionType.Rar, entry.CompressionType);
                     entry.WriteToDirectory(
                         SCRATCH_FILES_PATH,
-                        new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                        new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                     );
                 }
             }
@@ -90,7 +98,7 @@ public class RarArchiveTests : ArchiveTests
         using (
             var archive = RarArchive.Open(
                 Path.Combine(TEST_ARCHIVES_PATH, archiveName),
-                new ReaderOptions() { Password = password, LeaveStreamOpen = true }
+                new ReaderOptions { Password = password, LeaveStreamOpen = true }
             )
         )
         {
@@ -98,7 +106,7 @@ public class RarArchiveTests : ArchiveTests
             {
                 entry.WriteToDirectory(
                     SCRATCH_FILES_PATH,
-                    new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                 );
             }
         }
@@ -129,7 +137,7 @@ public class RarArchiveTests : ArchiveTests
         {
             entry.WriteToDirectory(
                 SCRATCH_FILES_PATH,
-                new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
             );
         }
     }
@@ -138,13 +146,13 @@ public class RarArchiveTests : ArchiveTests
     public void Rar_Jpg_ArchiveStreamRead()
     {
         using var stream = File.OpenRead(Path.Combine(TEST_ARCHIVES_PATH, "Rar.jpeg.jpg"));
-        using (var archive = RarArchive.Open(stream, new ReaderOptions() { LookForHeader = true }))
+        using (var archive = RarArchive.Open(stream, new ReaderOptions { LookForHeader = true }))
         {
             foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
             {
                 entry.WriteToDirectory(
                     SCRATCH_FILES_PATH,
-                    new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                 );
             }
         }
@@ -167,7 +175,7 @@ public class RarArchiveTests : ArchiveTests
             {
                 entry.WriteToDirectory(
                     SCRATCH_FILES_PATH,
-                    new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                 );
             }
         }
@@ -221,30 +229,28 @@ public class RarArchiveTests : ArchiveTests
     [Fact]
     public void Rar_Multi_ArchiveStreamRead() =>
         DoRar_Multi_ArchiveStreamRead(
-            new[]
-            {
+            [
                 "Rar.multi.part01.rar",
                 "Rar.multi.part02.rar",
                 "Rar.multi.part03.rar",
                 "Rar.multi.part04.rar",
                 "Rar.multi.part05.rar",
-                "Rar.multi.part06.rar"
-            },
+                "Rar.multi.part06.rar",
+            ],
             false
         );
 
     [Fact]
     public void Rar5_Multi_ArchiveStreamRead() =>
         DoRar_Multi_ArchiveStreamRead(
-            new[]
-            {
+            [
                 "Rar5.multi.part01.rar",
                 "Rar5.multi.part02.rar",
                 "Rar5.multi.part03.rar",
                 "Rar5.multi.part04.rar",
                 "Rar5.multi.part05.rar",
-                "Rar5.multi.part06.rar"
-            },
+                "Rar5.multi.part06.rar",
+            ],
             false
         );
 
@@ -258,7 +264,7 @@ public class RarArchiveTests : ArchiveTests
         {
             entry.WriteToDirectory(
                 SCRATCH_FILES_PATH,
-                new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
             );
         }
     }
@@ -266,15 +272,14 @@ public class RarArchiveTests : ArchiveTests
     [Fact]
     public void Rar5_MultiSolid_ArchiveStreamRead() =>
         DoRar_Multi_ArchiveStreamRead(
-            new[]
-            {
+            [
                 "Rar.multi.solid.part01.rar",
                 "Rar.multi.solid.part02.rar",
                 "Rar.multi.solid.part03.rar",
                 "Rar.multi.solid.part04.rar",
                 "Rar.multi.solid.part05.rar",
-                "Rar.multi.solid.part06.rar"
-            },
+                "Rar.multi.solid.part06.rar",
+            ],
             true
         );
 
@@ -312,7 +317,7 @@ public class RarArchiveTests : ArchiveTests
         using (
             var archive = RarArchive.Open(
                 Path.Combine(TEST_ARCHIVES_PATH, "Rar.jpeg.jpg"),
-                new ReaderOptions() { LookForHeader = true }
+                new ReaderOptions { LookForHeader = true }
             )
         )
         {
@@ -320,7 +325,7 @@ public class RarArchiveTests : ArchiveTests
             {
                 entry.WriteToDirectory(
                     SCRATCH_FILES_PATH,
-                    new ExtractionOptions() { ExtractFullPath = true, Overwrite = true }
+                    new ExtractionOptions { ExtractFullPath = true, Overwrite = true }
                 );
             }
         }
@@ -336,16 +341,15 @@ public class RarArchiveTests : ArchiveTests
     [Fact]
     public void Rar2_Multi_ArchiveStreamRead() =>
         DoRar_Multi_ArchiveStreamRead(
-            new[]
-            {
+            [
                 "Rar2.multi.rar",
                 "Rar2.multi.r00",
                 "Rar2.multi.r01",
                 "Rar2.multi.r02",
                 "Rar2.multi.r03",
                 "Rar2.multi.r04",
-                "Rar2.multi.r05"
-            },
+                "Rar2.multi.r05",
+            ],
             false
         );
 
@@ -359,9 +363,10 @@ public class RarArchiveTests : ArchiveTests
     public void Rar15_ArchiveFileRead()
     {
         UseExtensionInsteadOfNameToVerify = true;
-        UseCaseInsensitiveToVerify= true;
+        UseCaseInsensitiveToVerify = true;
         ArchiveFileRead("Rar15.rar");
     }
+
     [Fact]
     public void Rar15_ArchiveVersionTest()
     {
@@ -371,6 +376,7 @@ public class RarArchiveTests : ArchiveTests
         Assert.Equal(1, archive.MinVersion);
         Assert.Equal(1, archive.MaxVersion);
     }
+
     [Fact]
     public void Rar2_ArchiveVersionTest()
     {
@@ -418,7 +424,7 @@ public class RarArchiveTests : ArchiveTests
                 "Rar4.split.003",
                 "Rar4.split.004",
                 "Rar4.split.005",
-                "Rar4.split.006"
+                "Rar4.split.006",
             }
         );
 
@@ -434,7 +440,7 @@ public class RarArchiveTests : ArchiveTests
                 "Rar2.multi.r02",
                 "Rar2.multi.r03",
                 "Rar2.multi.r04",
-                "Rar2.multi.r05"
+                "Rar2.multi.r05",
             }
         );
 
@@ -450,23 +456,22 @@ public class RarArchiveTests : ArchiveTests
                 "Rar4.multi.part04.rar",
                 "Rar4.multi.part05.rar",
                 "Rar4.multi.part06.rar",
-                "Rar4.multi.part07.rar"
+                "Rar4.multi.part07.rar",
             }
         );
 
     [Fact]
     public void Rar4_Multi_ArchiveStreamRead() =>
         DoRar_Multi_ArchiveStreamRead(
-            new[]
-            {
+            [
                 "Rar4.multi.part01.rar",
                 "Rar4.multi.part02.rar",
                 "Rar4.multi.part03.rar",
                 "Rar4.multi.part04.rar",
                 "Rar4.multi.part05.rar",
                 "Rar4.multi.part06.rar",
-                "Rar4.multi.part07.rar"
-            },
+                "Rar4.multi.part07.rar",
+            ],
             false
         );
 
@@ -475,15 +480,14 @@ public class RarArchiveTests : ArchiveTests
     public void Rar4_Split_ArchiveStreamRead() =>
         ArchiveStreamMultiRead(
             null,
-            new[]
-            {
+            [
                 "Rar4.split.001",
                 "Rar4.split.002",
                 "Rar4.split.003",
                 "Rar4.split.004",
                 "Rar4.split.005",
-                "Rar4.split.006"
-            }
+                "Rar4.split.006",
+            ]
         );
 
     //will detect and load other files
@@ -510,15 +514,14 @@ public class RarArchiveTests : ArchiveTests
     public void Rar4_Split_ArchiveStreamFirstFileRead() =>
         ArchiveStreamMultiRead(
             null,
-            new[]
-            {
+            [
                 "Rar4.split.001",
                 //"Rar4.split.002",
                 //"Rar4.split.003",
                 //"Rar4.split.004",
                 //"Rar4.split.005",
                 //"Rar4.split.006"
-            }
+            ]
         );
 
     //open with ArchiveFactory.Open and stream
@@ -551,12 +554,11 @@ public class RarArchiveTests : ArchiveTests
     [Fact]
     public void Rar4_Multi_ArchiveOpenEntryVolumeIndexTest() =>
         ArchiveOpenEntryVolumeIndexTest(
-            new[]
-            {
-                new[] { 0, 1 }, //exe - Rar4.multi.part01.rar to Rar4.multi.part02.rar
-                new[] { 1, 5 }, //jpg - Rar4.multi.part02.rar to Rar4.multi.part06.rar
-                new[] { 5, 6 } //txt - Rar4.multi.part06.rar to Rar4.multi.part07.rar
-            },
+            [
+                [0, 1], //exe - Rar4.multi.part01.rar to Rar4.multi.part02.rar
+                [1, 5], //jpg - Rar4.multi.part02.rar to Rar4.multi.part06.rar
+                [5, 6], //txt - Rar4.multi.part06.rar to Rar4.multi.part07.rar
+            ],
             null,
             "Rar4.multi.part01.rar",
             "Rar4.multi.part02.rar",
@@ -598,4 +600,37 @@ public class RarArchiveTests : ArchiveTests
         Assert.True(archive.IsMultipartVolume());
         Assert.False(archive.IsFirstVolume());
     }
+
+    [Fact]
+    public void Rar5_CRC_Blake2_Archive() => ArchiveFileRead("Rar5.crc_blake2.rar");
+
+    [Fact]
+    void Rar_Iterate_Archive() =>
+        ArchiveFileSkip("Rar.rar", "Failure jpg exe Empty jpg\\test.jpg exe\\test.exe тест.txt");
+
+    [Fact]
+    public void Rar2_Iterate_Archive() =>
+        ArchiveFileSkip("Rar2.rar", "Failure Empty тест.txt jpg\\test.jpg exe\\test.exe jpg exe");
+
+    [Fact]
+    public void Rar4_Iterate_Archive() =>
+        ArchiveFileSkip("Rar4.rar", "Failure Empty jpg exe тест.txt jpg\\test.jpg exe\\test.exe");
+
+    [Fact]
+    public void Rar5_Iterate_Archive() =>
+        ArchiveFileSkip("Rar5.rar", "Failure jpg exe Empty тест.txt jpg\\test.jpg exe\\test.exe");
+
+    [Fact]
+    public void Rar_Encrypted_Iterate_Archive() =>
+        ArchiveFileSkip(
+            "Rar.encrypted_filesOnly.rar",
+            "Failure jpg exe Empty тест.txt jpg\\test.jpg exe\\test.exe"
+        );
+
+    [Fact]
+    public void Rar5_Encrypted_Iterate_Archive() =>
+        ArchiveFileSkip(
+            "Rar5.encrypted_filesOnly.rar",
+            "Failure jpg exe Empty тест.txt jpg\\test.jpg exe\\test.exe"
+        );
 }

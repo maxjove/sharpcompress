@@ -9,9 +9,9 @@ namespace SharpCompress.Test;
 
 public class WriterTests : TestBase
 {
-    private readonly ArchiveType type;
+    private readonly ArchiveType _type;
 
-    protected WriterTests(ArchiveType type) => this.type = type;
+    protected WriterTests(ArchiveType type) => _type = type;
 
     protected void Write(
         CompressionType compressionType,
@@ -22,11 +22,11 @@ public class WriterTests : TestBase
     {
         using (Stream stream = File.OpenWrite(Path.Combine(SCRATCH2_FILES_PATH, archive)))
         {
-            var writerOptions = new WriterOptions(compressionType) { LeaveStreamOpen = true, };
+            var writerOptions = new WriterOptions(compressionType) { LeaveStreamOpen = true };
 
             writerOptions.ArchiveEncoding.Default = encoding ?? Encoding.Default;
 
-            using var writer = WriterFactory.Open(stream, type, writerOptions);
+            using var writer = WriterFactory.Open(stream, _type, writerOptions);
             writer.WriteAll(ORIGINAL_FILES_PATH, "*", SearchOption.AllDirectories);
         }
         CompareArchivesByPath(
@@ -43,7 +43,7 @@ public class WriterTests : TestBase
             using var reader = ReaderFactory.Open(NonDisposingStream.Create(stream), readerOptions);
             reader.WriteAllToDirectory(
                 SCRATCH_FILES_PATH,
-                new ExtractionOptions() { ExtractFullPath = true }
+                new ExtractionOptions { ExtractFullPath = true }
             );
         }
         VerifyFiles();

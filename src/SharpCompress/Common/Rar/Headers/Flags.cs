@@ -13,7 +13,7 @@ public enum HeaderType : byte
     Sign,
     NewSub,
     EndArchive,
-    Crypt
+    Crypt,
 }
 
 internal static class HeaderCodeV
@@ -48,6 +48,17 @@ internal static class EncryptionFlagsV5
 
     public const uint FHEXTRA_CRYPT_PSWCHECK = 0x01; // Password check data is present.
     public const uint FHEXTRA_CRYPT_HASHMAC = 0x02;
+}
+
+internal static class EncryptionConstV5
+{
+    public const int VERSION = 0;
+    public const uint CRYPT5_KDF_LG2_COUNT_MAX = 0x24;
+    public const int SIZE_SALT30 = 0x08;
+    public const int SIZE_SALT50 = 0x10;
+    public const int SIZE_INITV = 0x10;
+    public const int SIZE_PSWCHECK = 0x08;
+    public const int SIZE_PSWCHECK_CSUM = 0x04;
 }
 
 internal static class HeaderFlagsV5
@@ -145,4 +156,18 @@ internal static class EndArchiveFlagsV4
 internal static class EndArchiveFlagsV5
 {
     public const ushort HAS_NEXT_VOLUME = 0x0001;
+}
+
+internal static class RedirTypeV5
+{
+    public const byte UNIX_SYMLINK = 0x0001;
+    public const byte WIN_SYMLINK = 0x0002;
+    public const byte WIN_JUNCTION = 0x0003;
+    public const byte HARD_LINK = 0x0004;
+    public const byte FILE_COPY = 0x0005;
+}
+
+internal static class RedirFlagV5
+{
+    public const byte DIRECTORY = 0x0001;
 }

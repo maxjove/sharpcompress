@@ -284,7 +284,7 @@ internal sealed class CBZip2OutputStream : Stream
     private int bytesOut;
     private int bsBuff;
     private int bsLive;
-    private readonly CRC mCrc = new CRC();
+    private readonly CRC mCrc = new();
 
     private readonly bool[] inUse = new bool[256];
     private int nInUse;
@@ -319,7 +319,8 @@ internal sealed class CBZip2OutputStream : Stream
     private int currentChar = -1;
     private int runLength;
 
-    public CBZip2OutputStream(Stream inStream) : this(inStream, 9) { }
+    public CBZip2OutputStream(Stream inStream)
+        : this(inStream, 9) { }
 
     public CBZip2OutputStream(Stream inStream, int inBlockSize)
     {
@@ -1828,7 +1829,7 @@ internal sealed class CBZip2OutputStream : Stream
         88573,
         265720,
         797161,
-        2391484
+        2391484,
     };
 
     private void AllocateCompressStructures()

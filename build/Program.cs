@@ -7,8 +7,10 @@ using static Bullseye.Targets;
 using static SimpleExec.Command;
 
 const string Clean = "clean";
+const string Restore = "restore";
 const string Build = "build";
 const string Test = "test";
+const string Format = "format";
 const string Publish = "publish";
 
 Target(
@@ -38,17 +40,28 @@ Target(
 );
 
 Target(
-    Build,
+    Format,
     () =>
     {
-        Run("dotnet", "build src/SharpCompress/SharpCompress.csproj -c Release");
+        Run("dotnet", "tool restore");
+        Run("dotnet", "csharpier --check .");
+    }
+);
+Target(Restore, DependsOn(Format), () => Run("dotnet", "restore"));
+
+Target(
+    Build,
+    DependsOn(Restore),
+    () =>
+    {
+        Run("dotnet", "build src/SharpCompress/SharpCompress.csproj -c Release --no-restore");
     }
 );
 
 Target(
     Test,
     DependsOn(Build),
-    ForEach("net7.0", "net462"),
+    ForEach("net8.0", "net48"),
     framework =>
     {
         IEnumerable<string> GetFiles(string d)
@@ -63,7 +76,7 @@ Target(
 
         foreach (var file in GetFiles("**/*.Test.csproj"))
         {
-            Run("dotnet", $"test {file} -c Release -f {framework}");
+            Run("dotnet", $"test {file} -c Release -f {framework} --no-restore --verbosity=normal");
         }
     }
 );

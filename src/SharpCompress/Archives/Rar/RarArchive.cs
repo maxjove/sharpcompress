@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,40 +14,55 @@ namespace SharpCompress.Archives.Rar;
 
 public class RarArchive : AbstractArchive<RarArchiveEntry, RarVolume>
 {
+    private bool _disposed;
     internal Lazy<IRarUnpack> UnpackV2017 { get; } =
-        new Lazy<IRarUnpack>(() => new Compressors.Rar.UnpackV2017.Unpack());
-    internal Lazy<IRarUnpack> UnpackV1 { get; } =
-        new Lazy<IRarUnpack>(() => new Compressors.Rar.UnpackV1.Unpack());
+        new(() => new Compressors.Rar.UnpackV2017.Unpack());
+    internal Lazy<IRarUnpack> UnpackV1 { get; } = new(() => new Compressors.Rar.UnpackV1.Unpack());
 
     /// <summary>
     /// Constructor with a SourceStream able to handle FileInfo and Streams.
     /// </summary>
-    /// <param name="srcStream"></param>
-    /// <param name="options"></param>
-    internal RarArchive(SourceStream srcStream) : base(ArchiveType.Rar, srcStream) { }
+    /// <param name="sourceStream"></param>
+    private RarArchive(SourceStream sourceStream)
+        : base(ArchiveType.Rar, sourceStream) { }
+
+    public override void Dispose()
+    {
+        if (!_disposed)
+        {
+            if (UnpackV1.IsValueCreated && UnpackV1.Value is IDisposable unpackV1)
+            {
+                unpackV1.Dispose();
+            }
+
+            _disposed = true;
+            base.Dispose();
+        }
+    }
 
     protected override IEnumerable<RarArchiveEntry> LoadEntries(IEnumerable<RarVolume> volumes) =>
         RarArchiveEntryFactory.GetEntries(this, volumes, ReaderOptions);
 
-    protected override IEnumerable<RarVolume> LoadVolumes(SourceStream srcStream)
+    protected override IEnumerable<RarVolume> LoadVolumes(SourceStream sourceStream)
     {
-        SrcStream.LoadAllParts(); //request all streams
-        var streams = SrcStream.Streams.ToArray();
-        var idx = 0;
+        sourceStream.LoadAllParts(); //request all streams
+        var streams = sourceStream.Streams.ToArray();
+        var i = 0;
         if (streams.Length > 1 && IsRarFile(streams[1], ReaderOptions)) //test part 2 - true = multipart not split
         {
-            SrcStream.IsVolumes = true;
+            sourceStream.IsVolumes = true;
             streams[1].Position = 0;
-            SrcStream.Position = 0;
+            sourceStream.Position = 0;
 
-            return srcStream.Streams.Select(
-                a => new StreamRarArchiveVolume(a, ReaderOptions, idx++)
-            );
+            return sourceStream.Streams.Select(a => new StreamRarArchiveVolume(
+                a,
+                ReaderOptions,
+                i++
+            ));
         }
-        else //split mode or single file
-        {
-            return new StreamRarArchiveVolume(SrcStream, ReaderOptions, idx++).AsEnumerable();
-        }
+
+        //split mode or single file
+        return new StreamRarArchiveVolume(sourceStream, ReaderOptions, i++).AsEnumerable();
     }
 
     protected override IReader CreateReaderForSolidExtraction()
@@ -105,7 +121,7 @@ public class RarArchive : AbstractArchive<RarArchiveEntry, RarVolume>
     public static RarArchive Open(Stream stream, ReaderOptions? options = null)
     {
         stream.CheckNotNull(nameof(stream));
-        return new RarArchive(new SourceStream(stream, i => null, options ?? new ReaderOptions()));
+        return new RarArchive(new SourceStream(stream, _ => null, options ?? new ReaderOptions()));
     }
 
     /// <summary>

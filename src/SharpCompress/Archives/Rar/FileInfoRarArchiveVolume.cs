@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using SharpCompress.Common.Rar;
@@ -13,7 +14,7 @@ namespace SharpCompress.Archives.Rar;
 /// </summary>
 internal class FileInfoRarArchiveVolume : RarVolume
 {
-    internal FileInfoRarArchiveVolume(FileInfo fileInfo, ReaderOptions options, int index = 0)
+    internal FileInfoRarArchiveVolume(FileInfo fileInfo, ReaderOptions options, int index)
         : base(StreamingMode.Seekable, fileInfo.OpenRead(), FixOptions(options), index)
     {
         FileInfo = fileInfo;

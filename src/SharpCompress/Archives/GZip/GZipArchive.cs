@@ -90,24 +90,23 @@ public class GZipArchive : AbstractWritableArchive<GZipArchiveEntry, GZipVolume>
     {
         stream.CheckNotNull(nameof(stream));
         return new GZipArchive(
-            new SourceStream(stream, i => null, readerOptions ?? new ReaderOptions())
+            new SourceStream(stream, _ => null, readerOptions ?? new ReaderOptions())
         );
     }
 
-    public static GZipArchive Create() => new GZipArchive();
+    public static GZipArchive Create() => new();
 
     /// <summary>
     /// Constructor with a SourceStream able to handle FileInfo and Streams.
     /// </summary>
-    /// <param name="srcStream"></param>
-    /// <param name="options"></param>
-    internal GZipArchive(SourceStream srcStream) : base(ArchiveType.Tar, srcStream) { }
+    /// <param name="sourceStream"></param>
+    private GZipArchive(SourceStream sourceStream)
+        : base(ArchiveType.GZip, sourceStream) { }
 
-    protected override IEnumerable<GZipVolume> LoadVolumes(SourceStream srcStream)
+    protected override IEnumerable<GZipVolume> LoadVolumes(SourceStream sourceStream)
     {
-        srcStream.LoadAllParts();
-        var idx = 0;
-        return srcStream.Streams.Select(a => new GZipVolume(a, ReaderOptions, idx++));
+        sourceStream.LoadAllParts();
+        return sourceStream.Streams.Select(a => new GZipVolume(a, ReaderOptions, 0));
     }
 
     public static bool IsGZipFile(string filePath) => IsGZipFile(new FileInfo(filePath));
@@ -150,7 +149,8 @@ public class GZipArchive : AbstractWritableArchive<GZipArchiveEntry, GZipVolume>
         return true;
     }
 
-    internal GZipArchive() : base(ArchiveType.GZip) { }
+    internal GZipArchive()
+        : base(ArchiveType.GZip) { }
 
     protected override GZipArchiveEntry CreateEntryInternal(
         string filePath,
@@ -182,7 +182,11 @@ public class GZipArchive : AbstractWritableArchive<GZipArchiveEntry, GZipVolume>
         foreach (var entry in oldEntries.Concat(newEntries).Where(x => !x.IsDirectory))
         {
             using var entryStream = entry.OpenEntryStream();
-            writer.Write(entry.Key, entryStream, entry.LastModifiedTime);
+            writer.Write(
+                entry.Key.NotNull("Entry Key is null"),
+                entryStream,
+                entry.LastModifiedTime
+            );
         }
     }
 

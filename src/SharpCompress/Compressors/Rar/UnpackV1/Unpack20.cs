@@ -25,15 +25,15 @@ internal partial class Unpack
 
     private readonly AudioVariables[] AudV = new AudioVariables[4];
 
-    private readonly LitDecode LD = new LitDecode();
+    private readonly LitDecode LD = new();
 
-    private readonly DistDecode DD = new DistDecode();
+    private readonly DistDecode DD = new();
 
-    private readonly LowDistDecode LDD = new LowDistDecode();
+    private readonly LowDistDecode LDD = new();
 
-    private readonly RepDecode RD = new RepDecode();
+    private readonly RepDecode RD = new();
 
-    private readonly BitDecode BD = new BitDecode();
+    private readonly BitDecode BD = new();
 
     private static readonly int[] LDecode =
     {
@@ -64,7 +64,7 @@ internal partial class Unpack
         128,
         160,
         192,
-        224
+        224,
     };
 
     private static ReadOnlySpan<byte> LBits =>
@@ -97,7 +97,7 @@ internal partial class Unpack
             5,
             5,
             5,
-            5
+            5,
         };
 
     private static readonly int[] DDecode =
@@ -149,7 +149,7 @@ internal partial class Unpack
         786432,
         851968,
         917504,
-        983040
+        983040,
     };
 
     private static readonly int[] DBits =
@@ -201,7 +201,7 @@ internal partial class Unpack
         16,
         16,
         16,
-        16
+        16,
     };
 
     private static readonly int[] SDDecode = { 0, 4, 8, 16, 32, 64, 128, 192 };
@@ -391,8 +391,8 @@ internal partial class Unpack
 
     private bool ReadTables20()
     {
-        var BitLength = new byte[PackDef.BC20];
-        var Table = new byte[PackDef.MC20 * 4];
+        Span<byte> BitLength = stackalloc byte[PackDef.BC20];
+        Span<byte> Table = stackalloc byte[PackDef.MC20 * 4];
         int TableSize,
             N,
             I;

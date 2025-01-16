@@ -1,37 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using SharpCompress.Crypto;
 
 namespace SharpCompress.Common.Rar;
 
 internal sealed class RarCryptoWrapper : Stream
 {
     private readonly Stream _actualStream;
-    private readonly byte[] _salt;
-    private RarRijndael _rijndael;
-    private readonly Queue<byte> _data = new Queue<byte>();
+    private BlockTransformer _rijndael;
+    private readonly Queue<byte> _data = new();
 
-    public RarCryptoWrapper(Stream actualStream, string password, byte[] salt)
+    public RarCryptoWrapper(Stream actualStream, byte[] salt, ICryptKey key)
     {
         _actualStream = actualStream;
-        _salt = salt;
-        _rijndael = RarRijndael.InitializeFrom(password, salt);
+        _rijndael = new BlockTransformer(key.Transformer(salt));
     }
 
-    public override void Flush() => throw new NotSupportedException();
+    public override void Flush() { }
 
     public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
 
     public override void SetLength(long value) => throw new NotSupportedException();
 
-    public override int Read(byte[] buffer, int offset, int count)
-    {
-        if (_salt is null)
-        {
-            return _actualStream.Read(buffer, offset, count);
-        }
-        return ReadAndDecrypt(buffer, offset, count);
-    }
+    public override int Read(byte[] buffer, int offset, int count) =>
+        ReadAndDecrypt(buffer, offset, count);
 
     public int ReadAndDecrypt(byte[] buffer, int offset, int count)
     {
@@ -41,7 +34,7 @@ internal sealed class RarCryptoWrapper : Stream
         if (sizeToRead > 0)
         {
             var alignedSize = sizeToRead + ((~sizeToRead + 1) & 0xf);
-            Span<byte> cipherText = stackalloc byte[RarRijndael.CRYPTO_BLOCK_SIZE];
+            Span<byte> cipherText = stackalloc byte[16];
             for (var i = 0; i < alignedSize / 16; i++)
             {
                 //long ax = System.currentTimeMillis();
@@ -77,11 +70,11 @@ internal sealed class RarCryptoWrapper : Stream
 
     protected override void Dispose(bool disposing)
     {
-        if (_rijndael != null)
+        if (disposing)
         {
             _rijndael.Dispose();
-            _rijndael = null!;
         }
+
         base.Dispose(disposing);
     }
 }

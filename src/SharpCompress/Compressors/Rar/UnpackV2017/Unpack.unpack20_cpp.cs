@@ -1,12 +1,14 @@
-#if !Rar2017_64bit
+using System;
+using static SharpCompress.Compressors.Rar.UnpackV2017.PackDef;
+using static SharpCompress.Compressors.Rar.UnpackV2017.Unpack.Unpack20Local;
+
+/*#if !Rar2017_64bit
 #else
 using nint = System.Int64;
 using nuint = System.UInt64;
 using size_t = System.UInt64;
-#endif
-using System;
-using static SharpCompress.Compressors.Rar.UnpackV2017.PackDef;
-using static SharpCompress.Compressors.Rar.UnpackV2017.Unpack.Unpack20Local;
+#endif*/
+
 
 namespace SharpCompress.Compressors.Rar.UnpackV2017;
 
@@ -51,7 +53,7 @@ internal partial class Unpack
             128,
             160,
             192,
-            224
+            224,
         };
         public static readonly byte[] LBits =
         {
@@ -82,7 +84,7 @@ internal partial class Unpack
             5,
             5,
             5,
-            5
+            5,
         };
         public static readonly uint[] DDecode =
         {
@@ -133,7 +135,7 @@ internal partial class Unpack
             786432,
             851968,
             917504,
-            983040
+            983040,
         };
         public static readonly byte[] DBits =
         {
@@ -184,7 +186,7 @@ internal partial class Unpack
             16,
             16,
             16,
-            16
+            16,
         };
         public static readonly byte[] SDDecode = { 0, 4, 8, 16, 32, 64, 128, 192 };
         public static readonly byte[] SDBits = { 2, 2, 3, 4, 5, 6, 6, 6 };
@@ -371,8 +373,8 @@ internal partial class Unpack
 
     private bool ReadTables20()
     {
-        var BitLength = new byte[BC20];
-        var Table = new byte[MC20 * 4];
+        Span<byte> BitLength = stackalloc byte[checked((int)BC20)];
+        Span<byte> Table = stackalloc byte[checked((int)MC20 * 4)];
         if (Inp.InAddr > ReadTop - 25)
         {
             if (!UnpReadBuf())
@@ -408,13 +410,13 @@ internal partial class Unpack
             TableSize = NC20 + DC20 + RC20;
         }
 
-        for (uint I = 0; I < BC20; I++)
+        for (int I = 0; I < checked((int)BC20); I++)
         {
             BitLength[I] = (byte)(Inp.getbits() >> 12);
             Inp.addbits(4);
         }
         MakeDecodeTables(BitLength, 0, BlockTables.BD, BC20);
-        for (uint I = 0; I < TableSize; )
+        for (int I = 0; I < checked((int)TableSize); )
         {
             if (Inp.InAddr > ReadTop - 5)
             {
@@ -485,8 +487,7 @@ internal partial class Unpack
             MakeDecodeTables(Table, (int)NC20, BlockTables.DD, DC20);
             MakeDecodeTables(Table, (int)(NC20 + DC20), BlockTables.RD, RC20);
         }
-        //x memcpy(UnpOldTable20,Table,sizeof(UnpOldTable20));
-        Array.Copy(Table, UnpOldTable20, UnpOldTable20.Length);
+        Table.CopyTo(this.UnpOldTable20);
         return true;
     }
 

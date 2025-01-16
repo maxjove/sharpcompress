@@ -14,7 +14,8 @@ public class TarWriter : AbstractWriter
 {
     private readonly bool finalizeArchiveOnClose;
 
-    public TarWriter(Stream destination, TarWriterOptions options) : base(ArchiveType.Tar, options)
+    public TarWriter(Stream destination, TarWriterOptions options)
+        : base(ArchiveType.Tar, options)
     {
         finalizeArchiveOnClose = options.FinalizeArchiveOnClose;
 
@@ -31,19 +32,16 @@ public class TarWriter : AbstractWriter
             case CompressionType.None:
                 break;
             case CompressionType.BZip2:
-
                 {
                     destination = new BZip2Stream(destination, CompressionMode.Compress, false);
                 }
                 break;
             case CompressionType.GZip:
-
                 {
                     destination = new GZipStream(destination, CompressionMode.Compress);
                 }
                 break;
             case CompressionType.LZip:
-
                 {
                     destination = new LZipStream(destination, CompressionMode.Compress);
                 }
@@ -55,7 +53,7 @@ public class TarWriter : AbstractWriter
                 );
             }
         }
-        InitalizeStream(destination);
+        InitializeStream(destination);
     }
 
     public override void Write(string filename, Stream source, DateTime? modificationTime) =>
@@ -89,8 +87,7 @@ public class TarWriter : AbstractWriter
         header.Name = NormalizeFilename(filename);
         header.Size = realSize;
         header.Write(OutputStream);
-
-        size = source.TransferTo(OutputStream);
+        size = source.TransferTo(OutputStream, realSize);
         PadTo512(size.Value);
     }
 

@@ -6,8 +6,8 @@ namespace SharpCompress.Archives.Rar;
 
 internal class SeekableFilePart : RarFilePart
 {
-    private readonly Stream stream;
-    private readonly string? password;
+    private readonly Stream _stream;
+    private readonly string? _password;
 
     internal SeekableFilePart(
         MarkHeader mh,
@@ -15,20 +15,30 @@ internal class SeekableFilePart : RarFilePart
         int index,
         Stream stream,
         string? password
-    ) : base(mh, fh, index)
+    )
+        : base(mh, fh, index)
     {
-        this.stream = stream;
-        this.password = password;
+        _stream = stream;
+        _password = password;
     }
 
     internal override Stream GetCompressedStream()
     {
-        stream.Position = FileHeader.DataStartPosition;
+        _stream.Position = FileHeader.DataStartPosition;
+
         if (FileHeader.R4Salt != null)
         {
-            return new RarCryptoWrapper(stream, password!, FileHeader.R4Salt);
+            var cryptKey = new CryptKey3(_password!);
+            return new RarCryptoWrapper(_stream, FileHeader.R4Salt, cryptKey);
         }
-        return stream;
+
+        if (FileHeader.Rar5CryptoInfo != null)
+        {
+            var cryptKey = new CryptKey5(_password!, FileHeader.Rar5CryptoInfo);
+            return new RarCryptoWrapper(_stream, FileHeader.Rar5CryptoInfo.Salt, cryptKey);
+        }
+
+        return _stream;
     }
 
     internal override string FilePartName => "Unknown Stream - File Entry: " + FileHeader.FileName;

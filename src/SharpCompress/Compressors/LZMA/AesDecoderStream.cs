@@ -20,7 +20,8 @@ internal sealed class AesDecoderStream : DecoderStream2
 
     public AesDecoderStream(Stream input, byte[] info, IPasswordProvider pass, long limit)
     {
-        if (pass.CryptoGetTextPassword() == null)
+        var password = pass.CryptoGetTextPassword();
+        if (password == null)
         {
             throw new SharpCompress.Common.CryptographicException(
                 "Encrypted 7Zip archive has no password specified."
@@ -35,10 +36,10 @@ internal sealed class AesDecoderStream : DecoderStream2
             throw new NotSupportedException("AES decoder does not support padding.");
         }
 
-        Init(info, out int numCyclesPower, out byte[] salt, out byte[] seed);
+        Init(info, out var numCyclesPower, out var salt, out var seed);
 
-        byte[] password = Encoding.Unicode.GetBytes(pass.CryptoGetTextPassword());
-        byte[]? key = InitKey(numCyclesPower, salt, password);
+        var passwordBytes = Encoding.Unicode.GetBytes(password);
+        var key = InitKey(numCyclesPower, salt, passwordBytes);
         if (key == null)
         {
             throw new InvalidOperationException("Initialized with null key");
@@ -100,7 +101,7 @@ internal sealed class AesDecoderStream : DecoderStream2
 
             do
             {
-                int read = mStream.Read(mBuffer, mEnding, mBuffer.Length - mEnding);
+                var read = mStream.Read(mBuffer, mEnding, mBuffer.Length - mEnding);
                 if (read == 0)
                 {
                     // We are not done decoding and have less than 16 bytes.
@@ -133,7 +134,7 @@ internal sealed class AesDecoderStream : DecoderStream2
         }
 
         // Otherwise we transform directly into the target buffer.
-        int processed = mDecoder.TransformBlock(mBuffer, mOffset, count & ~15, buffer, offset);
+        var processed = mDecoder.TransformBlock(mBuffer, mOffset, count & ~15, buffer, offset);
         mOffset += processed;
         mWritten += processed;
         return processed;
@@ -143,7 +144,7 @@ internal sealed class AesDecoderStream : DecoderStream2
 
     private void Init(byte[] info, out int numCyclesPower, out byte[] salt, out byte[] iv)
     {
-        byte bt = info[0];
+        var bt = info[0];
         numCyclesPower = bt & 0x3F;
 
         if ((bt & 0xC0) == 0)
@@ -153,14 +154,14 @@ internal sealed class AesDecoderStream : DecoderStream2
             return;
         }
 
-        int saltSize = (bt >> 7) & 1;
-        int ivSize = (bt >> 6) & 1;
+        var saltSize = (bt >> 7) & 1;
+        var ivSize = (bt >> 6) & 1;
         if (info.Length == 1)
         {
             throw new InvalidOperationException();
         }
 
-        byte bt2 = info[1];
+        var bt2 = info[1];
         saltSize += (bt2 >> 4);
         ivSize += (bt2 & 15);
         if (info.Length < 2 + saltSize + ivSize)
@@ -169,13 +170,13 @@ internal sealed class AesDecoderStream : DecoderStream2
         }
 
         salt = new byte[saltSize];
-        for (int i = 0; i < saltSize; i++)
+        for (var i = 0; i < saltSize; i++)
         {
             salt[i] = info[i + 2];
         }
 
         iv = new byte[16];
-        for (int i = 0; i < ivSize; i++)
+        for (var i = 0; i < ivSize; i++)
         {
             iv[i] = info[i + saltSize + 2];
         }
@@ -198,7 +199,7 @@ internal sealed class AesDecoderStream : DecoderStream2
                 key[pos] = salt[pos];
             }
 
-            for (int i = 0; i < pass.Length && pos < 32; i++)
+            for (var i = 0; i < pass.Length && pos < 32; i++)
             {
                 key[pos++] = pass[i];
             }
@@ -207,31 +208,9 @@ internal sealed class AesDecoderStream : DecoderStream2
         }
         else
         {
-#if NETSTANDARD2_0
-            using IncrementalHash sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            byte[] counter = new byte[8];
-            long numRounds = 1L << mNumCyclesPower;
-            for (long round = 0; round < numRounds; round++)
-            {
-                sha.AppendData(salt, 0, salt.Length);
-                sha.AppendData(pass, 0, pass.Length);
-                sha.AppendData(counter, 0, 8);
-
-                // This mirrors the counter so we don't have to convert long to byte[] each round.
-                // (It also ensures the counter is little endian, which BitConverter does not.)
-                for (int i = 0; i < 8; i++)
-                {
-                    if (++counter[i] != 0)
-                    {
-                        break;
-                    }
-                }
-            }
-            return sha.GetHashAndReset();
-#else
             using var sha = SHA256.Create();
-            byte[] counter = new byte[8];
-            long numRounds = 1L << mNumCyclesPower;
+            var counter = new byte[8];
+            var numRounds = 1L << mNumCyclesPower;
             for (long round = 0; round < numRounds; round++)
             {
                 sha.TransformBlock(salt, 0, salt.Length, null, 0);
@@ -240,7 +219,7 @@ internal sealed class AesDecoderStream : DecoderStream2
 
                 // This mirrors the counter so we don't have to convert long to byte[] each round.
                 // (It also ensures the counter is little endian, which BitConverter does not.)
-                for (int i = 0; i < 8; i++)
+                for (var i = 0; i < 8; i++)
                 {
                     if (++counter[i] != 0)
                     {
@@ -251,7 +230,6 @@ internal sealed class AesDecoderStream : DecoderStream2
 
             sha.TransformFinalBlock(counter, 0, 0);
             return sha.Hash;
-#endif
         }
     }
 
@@ -261,7 +239,7 @@ internal sealed class AesDecoderStream : DecoderStream2
         // Just transform as much as possible so we can feed from it as long as possible.
         if (mUnderflow == 0)
         {
-            int blockSize = (mEnding - mOffset) & ~15;
+            var blockSize = (mEnding - mOffset) & ~15;
             mUnderflow = mDecoder.TransformBlock(mBuffer, mOffset, blockSize, mBuffer, mOffset);
         }
 

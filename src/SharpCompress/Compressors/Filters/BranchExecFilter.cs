@@ -24,30 +24,27 @@ public sealed class BranchExecFilter
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool X86TestByte(byte b)
-    {
-        return b == 0x00 || b == 0xFF;
-    }
+    private static bool X86TestByte(byte b) => b == 0x00 || b == 0xFF;
 
     //Replaced X86Converter with bcj_x86() - https://github.com/torvalds/linux/blob/master/lib/xz/xz_dec_bcj.c
     //This was to fix an issue decoding a Test zip made with WinZip (that 7zip was also able to read).
     //The previous version of the code would corrupt 2 bytes in the Test.exe at 0x6CF9 (3D6D - should be 4000) - Test zip: WinZip27.Xz.zipx
     public static void X86Converter(byte[] buf, uint ip, ref uint state)
     {
-        bool[] mask_to_allowed_status = new[] { true, true, true, false, true, false, false, false };
+        var mask_to_allowed_status = new[] { true, true, true, false, true, false, false, false };
 
-        byte[] mask_to_bit_num = new byte[] { 0, 1, 2, 2, 3, 3, 3, 3 };
+        var mask_to_bit_num = new byte[] { 0, 1, 2, 2, 3, 3, 3, 3 };
 
         int i;
-        int prev_pos = -1;
-        uint prev_mask = state & 7;
+        var prev_pos = -1;
+        var prev_mask = state & 7;
         uint src;
         uint dest;
         uint j;
         byte b;
-        uint pos = ip;
+        var pos = ip;
 
-        uint size = (uint)buf.Length;
+        var size = (uint)buf.Length;
 
         if (size <= 4)
             return;
@@ -69,8 +66,7 @@ public sealed class BranchExecFilter
                 if (prev_mask != 0)
                 {
                     b = buf[i + 4 - mask_to_bit_num[prev_mask]];
-                    if (!mask_to_allowed_status[prev_mask]
-                            || X86TestByte(b))
+                    if (!mask_to_allowed_status[prev_mask] || X86TestByte(b))
                     {
                         prev_pos = i;
                         prev_mask = (prev_mask << 1) | 1;
@@ -83,7 +79,8 @@ public sealed class BranchExecFilter
 
             if (X86TestByte(buf[i + 4]))
             {
-                src = ((uint)buf[i + 4] << 24)
+                src =
+                    ((uint)buf[i + 4] << 24)
                     | ((uint)buf[i + 3] << 16)
                     | ((uint)buf[i + 2] << 8)
                     | buf[i + 1];

@@ -1,5 +1,4 @@
 using System.Text;
-
 using SharpCompress.Common;
 using Xunit;
 
@@ -7,7 +6,8 @@ namespace SharpCompress.Test.Zip;
 
 public class ZipWriterTests : WriterTests
 {
-    public ZipWriterTests() : base(ArchiveType.Zip) { }
+    public ZipWriterTests()
+        : base(ArchiveType.Zip) { }
 
     [Fact]
     public void Zip_Deflate_Write() =>

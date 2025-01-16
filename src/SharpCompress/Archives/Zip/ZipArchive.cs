@@ -16,10 +16,7 @@ namespace SharpCompress.Archives.Zip;
 
 public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
 {
-#nullable disable
-    private readonly SeekableZipHeaderFactory headerFactory;
-
-#nullable enable
+    private readonly SeekableZipHeaderFactory? headerFactory;
 
     /// <summary>
     /// Gets or sets the compression level applied to files added to the archive,
@@ -30,12 +27,13 @@ public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
     /// <summary>
     /// Constructor with a SourceStream able to handle FileInfo and Streams.
     /// </summary>
-    /// <param name="srcStream"></param>
+    /// <param name="sourceStream"></param>
     /// <param name="options"></param>
-    internal ZipArchive(SourceStream srcStream) : base(ArchiveType.Zip, srcStream) =>
+    internal ZipArchive(SourceStream sourceStream)
+        : base(ArchiveType.Zip, sourceStream) =>
         headerFactory = new SeekableZipHeaderFactory(
-            srcStream.ReaderOptions.Password,
-            srcStream.ReaderOptions.ArchiveEncoding
+            sourceStream.ReaderOptions.Password,
+            sourceStream.ReaderOptions.ArchiveEncoding
         );
 
     /// <summary>
@@ -188,21 +186,21 @@ public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
         }
     }
 
-    protected override IEnumerable<ZipVolume> LoadVolumes(SourceStream srcStream)
+    protected override IEnumerable<ZipVolume> LoadVolumes(SourceStream stream)
     {
-        SrcStream.LoadAllParts(); //request all streams
-        SrcStream.Position = 0;
+        stream.LoadAllParts(); //request all streams
+        stream.Position = 0;
 
-        var streams = SrcStream.Streams.ToList();
+        var streams = stream.Streams.ToList();
         var idx = 0;
-        if (streams.Count > 1) //test part 2 - true = multipart not split
+        if (streams.Count() > 1) //test part 2 - true = multipart not split
         {
             streams[1].Position += 4; //skip the POST_DATA_DESCRIPTOR to prevent an exception
             var isZip = IsZipFile(streams[1], ReaderOptions.Password);
             streams[1].Position -= 4;
             if (isZip)
             {
-                SrcStream.IsVolumes = true;
+                stream.IsVolumes = true;
 
                 var tmp = streams[0]; //arcs as zip, z01 ... swap the zip the end
                 streams.RemoveAt(0);
@@ -214,22 +212,22 @@ public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
         }
 
         //split mode or single file
-        return new ZipVolume(SrcStream, ReaderOptions, idx++).AsEnumerable();
+        return new ZipVolume(stream, ReaderOptions, idx++).AsEnumerable();
     }
 
-    internal ZipArchive() : base(ArchiveType.Zip) { }
+    internal ZipArchive()
+        : base(ArchiveType.Zip) { }
 
     protected override IEnumerable<ZipArchiveEntry> LoadEntries(IEnumerable<ZipVolume> volumes)
     {
         var vols = volumes.ToArray();
-        foreach (var h in headerFactory.ReadSeekableHeader(vols.Last().Stream))
+        foreach (var h in headerFactory.NotNull().ReadSeekableHeader(vols.Last().Stream))
         {
             if (h != null)
             {
                 switch (h.ZipHeaderType)
                 {
                     case ZipHeaderType.DirectoryEntry:
-
                         {
                             var deh = (DirectoryEntryHeader)h;
                             Stream s;
@@ -252,14 +250,14 @@ public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
 
                             yield return new ZipArchiveEntry(
                                 this,
-                                new SeekableZipFilePart(headerFactory, deh, s)
+                                new SeekableZipFilePart(headerFactory.NotNull(), deh, s)
                             );
                         }
                         break;
                     case ZipHeaderType.DirectoryEnd:
                     {
                         var bytes = ((DirectoryEndHeader)h).Comment ?? Array.Empty<byte>();
-                        volumes.Last().Comment = ReaderOptions.ArchiveEncoding.Decode(bytes);
+                        vols.Last().Comment = ReaderOptions.ArchiveEncoding.Decode(bytes);
                         yield break;
                     }
                 }
@@ -280,7 +278,11 @@ public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
         foreach (var entry in oldEntries.Concat(newEntries).Where(x => !x.IsDirectory))
         {
             using var entryStream = entry.OpenEntryStream();
-            writer.Write(entry.Key, entryStream, entry.LastModifiedTime);
+            writer.Write(
+                entry.Key.NotNull("Entry Key is null"),
+                entryStream,
+                entry.LastModifiedTime
+            );
         }
     }
 
@@ -292,7 +294,7 @@ public class ZipArchive : AbstractWritableArchive<ZipArchiveEntry, ZipVolume>
         bool closeStream
     ) => new ZipWritableArchiveEntry(this, source, filePath, size, modified, closeStream);
 
-    public static ZipArchive Create() => new ZipArchive();
+    public static ZipArchive Create() => new();
 
     protected override IReader CreateReaderForSolidExtraction()
     {

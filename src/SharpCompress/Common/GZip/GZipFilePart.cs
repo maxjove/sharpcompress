@@ -13,7 +13,8 @@ internal sealed class GZipFilePart : FilePart
     private string? _name;
     private readonly Stream _stream;
 
-    internal GZipFilePart(Stream stream, ArchiveEncoding archiveEncoding) : base(archiveEncoding)
+    internal GZipFilePart(Stream stream, ArchiveEncoding archiveEncoding)
+        : base(archiveEncoding)
     {
         _stream = stream;
         ReadAndValidateGzipHeader();
@@ -33,7 +34,7 @@ internal sealed class GZipFilePart : FilePart
     internal uint? Crc { get; private set; }
     internal uint? UncompressedSize { get; private set; }
 
-    internal override string FilePartName => _name!;
+    internal override string? FilePartName => _name;
 
     internal override Stream GetCompressedStream() =>
         new DeflateStream(_stream, CompressionMode.Decompress, CompressionLevel.Default);

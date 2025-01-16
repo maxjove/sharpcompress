@@ -14,8 +14,8 @@ public class LzmaStream : Stream
     private readonly long _outputSize;
 
     private readonly int _dictionarySize;
-    private readonly OutWindow _outWindow = new OutWindow();
-    private readonly RangeCoder.Decoder _rangeDecoder = new RangeCoder.Decoder();
+    private readonly OutWindow _outWindow = new();
+    private readonly RangeCoder.Decoder _rangeDecoder = new();
     private Decoder _decoder;
 
     private long _position;
@@ -207,14 +207,23 @@ public class LzmaStream : Stream
 
             if (_availableBytes == 0 && !_uncompressedChunk)
             {
-                _rangeDecoder.ReleaseStream();
+                // Check range corruption scenario
                 if (
                     !_rangeDecoder.IsFinished
                     || (_rangeDecoderLimit >= 0 && _rangeDecoder._total != _rangeDecoderLimit)
                 )
                 {
-                    throw new DataErrorException();
+                    // Stream might have End Of Stream marker
+                    _outWindow.SetLimit(toProcess + 1);
+                    if (!_decoder.Code(_dictionarySize, _outWindow, _rangeDecoder))
+                    {
+                        _rangeDecoder.ReleaseStream();
+                        throw new DataErrorException();
+                    }
                 }
+
+                _rangeDecoder.ReleaseStream();
+
                 _inputPosition += _rangeDecoder._total;
                 if (_outWindow.HasPending)
                 {

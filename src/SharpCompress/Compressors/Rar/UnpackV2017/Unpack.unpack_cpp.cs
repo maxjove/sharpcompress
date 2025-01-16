@@ -1,5 +1,9 @@
 #nullable disable
 
+using System;
+using SharpCompress.Common;
+using static SharpCompress.Compressors.Rar.UnpackV2017.PackDef;
+using static SharpCompress.Compressors.Rar.UnpackV2017.UnpackGlobal;
 #if !Rar2017_64bit
 using size_t = System.UInt32;
 #else
@@ -7,11 +11,6 @@ using nint = System.Int64;
 using nuint = System.UInt64;
 using size_t = System.UInt64;
 #endif
-
-using System;
-using SharpCompress.Common;
-using static SharpCompress.Compressors.Rar.UnpackV2017.UnpackGlobal;
-using static SharpCompress.Compressors.Rar.UnpackV2017.PackDef;
 
 namespace SharpCompress.Compressors.Rar.UnpackV2017;
 
@@ -30,12 +29,12 @@ internal sealed partial class Unpack : BitInput
         Suspended = false;
         UnpAllBuf = false;
         UnpSomeRead = false;
-#if RarV2017_RAR_SMP
-        MaxUserThreads = 1;
-        UnpThreadPool = CreateThreadPool();
-        ReadBufMT = null;
-        UnpThreadData = null;
-#endif
+        /*#if RarV2017_RAR_SMP
+                MaxUserThreads = 1;
+                UnpThreadPool = CreateThreadPool();
+                ReadBufMT = null;
+                UnpThreadData = null;
+        #endif*/
         MaxWinSize = 0;
         MaxWinMask = 0;
 
@@ -199,21 +198,21 @@ internal sealed partial class Unpack : BitInput
                 break;
 #endif
             case 50: // RAR 5.0 compression algorithm.
-#if RarV2017_RAR_SMP
-                if (MaxUserThreads > 1)
-                {
-                    //      We do not use the multithreaded unpack routine to repack RAR archives
-                    //      in 'suspended' mode, because unlike the single threaded code it can
-                    //      write more than one dictionary for same loop pass. So we would need
-                    //      larger buffers of unknown size. Also we do not support multithreading
-                    //      in fragmented window mode.
-                    if (!Fragmented)
-                    {
-                        Unpack5MT(Solid);
-                        break;
-                    }
-                }
-#endif
+                /*#if RarV2017_RAR_SMP
+                                if (MaxUserThreads > 1)
+                                {
+                                    //      We do not use the multithreaded unpack routine to repack RAR archives
+                                    //      in 'suspended' mode, because unlike the single threaded code it can
+                                    //      write more than one dictionary for same loop pass. So we would need
+                                    //      larger buffers of unknown size. Also we do not support multithreading
+                                    //      in fragmented window mode.
+                                    if (!Fragmented)
+                                    {
+                                        Unpack5MT(Solid);
+                                        break;
+                                    }
+                                }
+                #endif*/
                 Unpack5(Solid);
                 break;
 #if !Rar2017_NOSTRICT
@@ -260,7 +259,7 @@ internal sealed partial class Unpack : BitInput
     // LengthTable contains the length in bits for every element of alphabet.
     // Dec is the structure to decode Huffman code/
     // Size is size of length table and DecodeNum field in Dec structure,
-    private void MakeDecodeTables(byte[] LengthTable, int offset, DecodeTable Dec, uint Size)
+    private void MakeDecodeTables(Span<byte> LengthTable, int offset, DecodeTable Dec, uint Size)
     {
         // Size of alphabet and DecodePos array.
         Dec.MaxNum = Size;
@@ -270,7 +269,7 @@ internal sealed partial class Unpack : BitInput
         //memset(LengthCount,0,sizeof(LengthCount));
         for (size_t I = 0; I < Size; I++)
         {
-            LengthCount[LengthTable[offset + I] & 0xf]++;
+            LengthCount[LengthTable[checked((int)(offset + I))] & 0xf]++;
         }
 
         // We must not calculate the number of zero length codes.
@@ -319,7 +318,7 @@ internal sealed partial class Unpack : BitInput
         for (uint I = 0; I < Size; I++)
         {
             // Get the current bit length.
-            var _CurBitLength = (byte)(LengthTable[offset + I] & 0xf);
+            var _CurBitLength = (byte)(LengthTable[checked((int)(offset + I))] & 0xf);
 
             if (_CurBitLength != 0)
             {

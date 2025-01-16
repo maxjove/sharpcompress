@@ -1,5 +1,9 @@
-﻿#nullable disable
+#nullable disable
 
+using System;
+using static SharpCompress.Compressors.Rar.UnpackV2017.PackDef;
+using static SharpCompress.Compressors.Rar.UnpackV2017.UnpackGlobal;
+using int64 = System.Int64;
 #if !Rar2017_64bit
 using size_t = System.UInt32;
 #else
@@ -7,11 +11,6 @@ using nint = System.Int64;
 using nuint = System.UInt64;
 using size_t = System.UInt64;
 #endif
-using int64 = System.Int64;
-
-using System;
-using static SharpCompress.Compressors.Rar.UnpackV2017.PackDef;
-using static SharpCompress.Compressors.Rar.UnpackV2017.UnpackGlobal;
 
 namespace SharpCompress.Compressors.Rar.UnpackV2017;
 
@@ -531,7 +530,6 @@ internal partial class Unpack
         {
             case FILTER_E8:
             case FILTER_E8E9:
-
                 {
                     var FileOffset = (uint)WrittenFileSize;
 
@@ -570,7 +568,6 @@ internal partial class Unpack
                 }
                 return SrcData;
             case FILTER_ARM:
-
                 {
                     var FileOffset = (uint)WrittenFileSize;
                     // DataSize is unsigned, so we use "CurPos+3" and not "DataSize-3"
@@ -753,8 +750,8 @@ internal partial class Unpack
             }
         }
 
-        var BitLength = new byte[BC];
-        for (uint I = 0; I < BC; I++)
+        Span<byte> BitLength = stackalloc byte[checked((int)BC)];
+        for (int I = 0; I < BC; I++)
         {
             uint Length = (byte)(Inp.fgetbits() >> 12);
             Inp.faddbits(4);
@@ -785,9 +782,9 @@ internal partial class Unpack
 
         MakeDecodeTables(BitLength, 0, Tables.BD, BC);
 
-        var Table = new byte[HUFF_TABLE_SIZE];
-        const uint TableSize = HUFF_TABLE_SIZE;
-        for (uint I = 0; I < TableSize; )
+        Span<byte> Table = stackalloc byte[checked((int)HUFF_TABLE_SIZE)];
+        const int TableSize = checked((int)HUFF_TABLE_SIZE);
+        for (int I = 0; I < TableSize; )
         {
             if (!Inp.ExternalBuffer && Inp.InAddr > ReadTop - 5)
             {

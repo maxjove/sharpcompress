@@ -12,9 +12,8 @@ namespace SharpCompress.Test.Filters;
 
 public class BranchExecTests
 {
-    private static byte[] x86resultData { get; } =
-        new byte[]
-        {
+    private static byte[] X86ResultData { get; } =
+        [
             0x12,
             0x00,
             0x00,
@@ -93,11 +92,10 @@ public class BranchExecTests
             0x00,
             0x1C,
             0x00,
-        };
+        ];
 
-    private static byte[] x86Data { get; } =
-        new byte[]
-        {
+    private static byte[] X86Data { get; } =
+        [
             0x12,
             0x00,
             0x00,
@@ -176,11 +174,10 @@ public class BranchExecTests
             0x00,
             0x1C,
             0x00,
-        };
+        ];
 
-    private static byte[] ppcResultData { get; } =
-        new byte[]
-        {
+    private static byte[] PpcResultData { get; } =
+        [
             0xF8,
             0x6B,
             0x2E,
@@ -276,12 +273,11 @@ public class BranchExecTests
             0x7A,
             0xB2,
             0xD4,
-            0xED
-        };
+            0xED,
+        ];
 
-    private static byte[] ppcData { get; } =
-        new byte[]
-        {
+    private static byte[] PpcData { get; } =
+        [
             0xF8,
             0x6B,
             0x2E,
@@ -377,12 +373,11 @@ public class BranchExecTests
             0x7A,
             0xB2,
             0xD4,
-            0xED
-        };
+            0xED,
+        ];
 
-    private static byte[] armResultData { get; } =
-        new byte[]
-        {
+    private static byte[] ArmResultData { get; } =
+        [
             0x7C,
             0xFC,
             0x0A,
@@ -478,12 +473,11 @@ public class BranchExecTests
             0x00,
             0xC6,
             0x8F,
-            0xE2
-        };
+            0xE2,
+        ];
 
-    private static byte[] armData { get; } =
-        new byte[]
-        {
+    private static byte[] ArmData { get; } =
+        [
             0x7C,
             0xFC,
             0x0A,
@@ -579,12 +573,11 @@ public class BranchExecTests
             0x00,
             0xC6,
             0x8F,
-            0xE2
-        };
+            0xE2,
+        ];
 
-    private static byte[] armtResultData { get; } =
-        new byte[]
-        {
+    private static byte[] ArmtResultData { get; } =
+        [
             0x95,
             0x23,
             0xB6,
@@ -696,12 +689,11 @@ public class BranchExecTests
             0x7D,
             0xED,
             0x11,
-            0x0F
-        };
+            0x0F,
+        ];
 
-    private static byte[] armtData { get; } =
-        new byte[]
-        {
+    private static byte[] ArmtData { get; } =
+        [
             0x95,
             0x23,
             0xB6,
@@ -813,12 +805,11 @@ public class BranchExecTests
             0x7D,
             0xED,
             0x11,
-            0x0F
-        };
+            0x0F,
+        ];
 
-    private static byte[] ia64ResultData { get; } =
-        new byte[]
-        {
+    private static byte[] Ia64ResultData { get; } =
+        [
             0x4D,
             0xF8,
             0xF2,
@@ -914,12 +905,11 @@ public class BranchExecTests
             0x2B,
             0x72,
             0xD5,
-            0x0D
-        };
+            0x0D,
+        ];
 
-    private static byte[] ia64Data { get; } =
-        new byte[]
-        {
+    private static byte[] Ia64Data { get; } =
+        [
             0x4D,
             0xF8,
             0xF2,
@@ -1015,12 +1005,11 @@ public class BranchExecTests
             0x2B,
             0x72,
             0xD5,
-            0x0D
-        };
+            0x0D,
+        ];
 
-    private static byte[] sparcResultData { get; } =
-        new byte[]
-        {
+    private static byte[] SparcResultData { get; } =
+        [
             0x78,
             0x2E,
             0x73,
@@ -1099,11 +1088,10 @@ public class BranchExecTests
             0x00,
             0x10,
             0x00,
-        };
+        ];
 
-    private static byte[] sparcData { get; } =
-        new byte[]
-        {
+    private static byte[] SparcData { get; } =
+        [
             0x78,
             0x2E,
             0x73,
@@ -1182,7 +1170,7 @@ public class BranchExecTests
             0x00,
             0x10,
             0x00,
-        };
+        ];
 
     private void CompareBuffer(byte[] testBuffer, byte[] targetBuffer) =>
         Assert.Equal(testBuffer, targetBuffer);
@@ -1192,53 +1180,53 @@ public class BranchExecTests
     {
         uint state = 0;
         uint ip = 0x2000;
-        var testData = x86Data;
+        var testData = X86Data;
         BranchExecFilter.X86Converter(testData, ip, ref state);
-        CompareBuffer(testData, x86resultData);
+        CompareBuffer(testData, X86ResultData);
     }
 
     [Fact]
-    public void PowerPCConverterDecodeTest()
+    public void PowerPcConverterDecodeTest()
     {
         uint ip = 0x6A0;
-        var testData = ppcData;
+        var testData = PpcData;
         BranchExecFilter.PowerPCConverter(testData, ip);
-        CompareBuffer(testData, ppcResultData);
+        CompareBuffer(testData, PpcResultData);
     }
 
     [Fact]
-    public void ARMConverteDecoderTest()
+    public void ArmConverteDecoderTest()
     {
         uint ip = 0x3C00;
-        var testData = armData;
+        var testData = ArmData;
         BranchExecFilter.ARMConverter(testData, ip);
-        CompareBuffer(testData, armResultData);
+        CompareBuffer(testData, ArmResultData);
     }
 
     [Fact]
-    public void ARMTConverterDecodeTest()
+    public void ArmtConverterDecodeTest()
     {
         uint ip = 0xA00;
-        var testData = armtData;
+        var testData = ArmtData;
         BranchExecFilter.ARMTConverter(testData, ip);
-        CompareBuffer(testData, armtResultData);
+        CompareBuffer(testData, ArmtResultData);
     }
 
     [Fact]
-    public void IA64ConverterDecodeTest()
+    public void Ia64ConverterDecodeTest()
     {
         uint ip = 0xAA0;
-        var testData = ia64Data;
+        var testData = Ia64Data;
         BranchExecFilter.IA64Converter(testData, ip);
-        CompareBuffer(testData, ia64ResultData);
+        CompareBuffer(testData, Ia64ResultData);
     }
 
     [Fact]
-    public void SPARCConverterDecodeTest()
+    public void SparcConverterDecodeTest()
     {
         uint ip = 0x100;
-        var testData = sparcData;
+        var testData = SparcData;
         BranchExecFilter.SPARCConverter(testData, ip);
-        CompareBuffer(testData, sparcResultData);
+        CompareBuffer(testData, SparcResultData);
     }
 }

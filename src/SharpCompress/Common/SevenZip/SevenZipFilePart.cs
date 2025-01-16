@@ -17,7 +17,8 @@ internal class SevenZipFilePart : FilePart
         int index,
         CFileItem fileEntry,
         ArchiveEncoding archiveEncoding
-    ) : base(archiveEncoding)
+    )
+        : base(archiveEncoding)
     {
         _stream = stream;
         _database = database;
@@ -40,7 +41,7 @@ internal class SevenZipFilePart : FilePart
     {
         if (!Header.HasStream)
         {
-            return null!;
+            throw new InvalidOperationException("File does not have a stream.");
         }
         var folderStream = _database.GetFolderStream(_stream, Folder!, _database.PasswordProvider);
 
@@ -72,29 +73,24 @@ internal class SevenZipFilePart : FilePart
     private const uint K_PPMD = 0x030401;
     private const uint K_B_ZIP2 = 0x040202;
 
-    internal CompressionType GetCompression()
+    private CompressionType GetCompression()
     {
-        var coder = Folder!._coders.First();
-        switch (coder._methodId._id)
+        if (Header.IsDir)
         {
-            case K_LZMA:
-            case K_LZMA2:
-            {
-                return CompressionType.LZMA;
-            }
-            case K_PPMD:
-            {
-                return CompressionType.PPMd;
-            }
-            case K_B_ZIP2:
-            {
-                return CompressionType.BZip2;
-            }
-            default:
-                throw new NotImplementedException();
+            return CompressionType.None;
         }
+
+        var coder = Folder.NotNull()._coders.First();
+        return coder._methodId._id switch
+        {
+            K_LZMA or K_LZMA2 => CompressionType.LZMA,
+            K_PPMD => CompressionType.PPMd,
+            K_B_ZIP2 => CompressionType.BZip2,
+            _ => throw new NotImplementedException(),
+        };
     }
 
     internal bool IsEncrypted =>
-        Folder!._coders.FindIndex(c => c._methodId._id == CMethodId.K_AES_ID) != -1;
+        !Header.IsDir
+        && Folder?._coders.FindIndex(c => c._methodId._id == CMethodId.K_AES_ID) != -1;
 }

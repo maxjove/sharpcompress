@@ -9,10 +9,10 @@ namespace SharpCompress.IO;
 public class SourceStream : Stream
 {
     private long _prevSize;
-    private List<FileInfo> _files;
-    private List<Stream> _streams;
-    private Func<int, FileInfo?> _getFilePart;
-    private Func<int, Stream?> _getStreamPart;
+    private readonly List<FileInfo> _files;
+    private readonly List<Stream> _streams;
+    private readonly Func<int, FileInfo?>? _getFilePart;
+    private readonly Func<int, Stream?>? _getStreamPart;
     private int _stream;
 
     public SourceStream(FileInfo file, Func<int, FileInfo?> getPart, ReaderOptions options)
@@ -38,19 +38,19 @@ public class SourceStream : Stream
         if (!IsFileMode)
         {
             _streams.Add(stream!);
-            _getStreamPart = getStreamPart!;
-            _getFilePart = new Func<int, FileInfo>(a => null!);
-            if (stream is FileStream)
+            _getStreamPart = getStreamPart;
+            _getFilePart = _ => null;
+            if (stream is FileStream fileStream)
             {
-                _files.Add(new FileInfo(((FileStream)stream!).Name));
+                _files.Add(new FileInfo(fileStream.Name));
             }
         }
         else
         {
             _files.Add(file!);
             _streams.Add(_files[0].OpenRead());
-            _getFilePart = getFilePart!;
-            _getStreamPart = new Func<int, Stream>(a => null!);
+            _getFilePart = getFilePart;
+            _getStreamPart = _ => null;
         }
         _stream = 0;
         _prevSize = 0;
@@ -78,7 +78,7 @@ public class SourceStream : Stream
         {
             if (IsFileMode)
             {
-                var f = _getFilePart(_streams.Count);
+                var f = _getFilePart.NotNull("GetFilePart is null")(_streams.Count);
                 if (f == null)
                 {
                     _stream = _streams.Count - 1;
@@ -90,7 +90,7 @@ public class SourceStream : Stream
             }
             else
             {
-                var s = _getStreamPart(_streams.Count);
+                var s = _getStreamPart.NotNull("GetStreamPart is null")(_streams.Count);
                 if (s == null)
                 {
                     _stream = _streams.Count - 1;
@@ -98,9 +98,9 @@ public class SourceStream : Stream
                 }
                 //throw new Exception($"Stream part {idx} not available.");
                 _streams.Add(s);
-                if (s is FileStream)
+                if (s is FileStream stream)
                 {
-                    _files.Add(new FileInfo(((FileStream)s).Name));
+                    _files.Add(new FileInfo(stream.Name));
                 }
             }
         }
@@ -123,11 +123,11 @@ public class SourceStream : Stream
 
     public override bool CanWrite => false;
 
-    public override long Length => (!IsVolumes ? _streams.Sum(a => a.Length) : Current.Length);
+    public override long Length => !IsVolumes ? _streams.Sum(a => a.Length) : Current.Length;
 
     public override long Position
     {
-        get => _prevSize + Current.Position; //_prevSize is 0 for multivolume
+        get => _prevSize + Current.Position; //_prevSize is 0 for multi-volume
         set => Seek(value, SeekOrigin.Begin);
     }
 
@@ -167,7 +167,7 @@ public class SourceStream : Stream
                 // Add length of previous stream
                 _prevSize += length;
                 Current.Seek(0, SeekOrigin.Begin);
-                r = -1; //BugFix: reset to allow loop if count is still not 0 - was breaking split zipx (lzma xz etc) 
+                r = -1; //BugFix: reset to allow loop if count is still not 0 - was breaking split zipx (lzma xz etc)
             }
         }
 
@@ -222,9 +222,12 @@ public class SourceStream : Stream
             {
                 try
                 {
-                    stream?.Dispose();
+                    stream.Dispose();
                 }
-                catch { }
+                catch
+                {
+                    // ignored
+                }
             }
             _streams.Clear();
             _files.Clear();

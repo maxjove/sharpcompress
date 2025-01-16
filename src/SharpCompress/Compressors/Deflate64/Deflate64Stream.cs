@@ -4,11 +4,11 @@
 
 #nullable disable
 
-using SharpCompress.Common.Zip;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
+using SharpCompress.Common.Zip;
 
 namespace SharpCompress.Compressors.Deflate64;
 
@@ -118,8 +118,8 @@ public sealed class Deflate64Stream : Stream
         EnsureNotDisposed();
 
         int bytesRead;
-        int currentOffset = offset;
-        int remainingCount = count;
+        var currentOffset = offset;
+        var remainingCount = count;
 
         while (true)
         {
@@ -142,7 +142,7 @@ public sealed class Deflate64Stream : Stream
                 break;
             }
 
-            int bytes = _stream.Read(_buffer, 0, _buffer.Length);
+            var bytes = _stream.Read(_buffer, 0, _buffer.Length);
             if (bytes <= 0)
             {
                 break;

@@ -55,7 +55,13 @@ internal class ZipHeaderFactory
             }
             case POST_DATA_DESCRIPTOR:
             {
-                if (FlagUtility.HasFlag(_lastEntryHeader!.Flags, HeaderFlags.UsePostDataDescriptor))
+                if (
+                    _lastEntryHeader != null
+                    && FlagUtility.HasFlag(
+                        _lastEntryHeader.NotNull().Flags,
+                        HeaderFlags.UsePostDataDescriptor
+                    )
+                )
                 {
                     _lastEntryHeader.Crc = reader.ReadUInt32();
                     _lastEntryHeader.CompressedSize = zip64
@@ -142,8 +148,8 @@ internal class ZipHeaderFactory
 
             if (entryHeader.CompressionMethod == ZipCompressionMethod.WinzipAes)
             {
-                var data = entryHeader.Extra.SingleOrDefault(
-                    x => x.Type == ExtraDataType.WinZipAes
+                var data = entryHeader.Extra.SingleOrDefault(x =>
+                    x.Type == ExtraDataType.WinZipAes
                 );
                 if (data != null)
                 {
